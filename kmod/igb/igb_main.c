@@ -2885,7 +2885,6 @@ static int igb_probe(struct pci_dev *pdev,
 #endif /* HAVE_RHEL6_NET_DEVICE_OPS_EXT */
 	hw_features |= netdev->features;
 
-#else
 #ifdef NETIF_F_GRO
 
 	/* this is only needed on kernels prior to 2.6.39 */
