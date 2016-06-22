@@ -430,7 +430,7 @@ struct igb_q_vector {
 };
 
 enum e1000_ring_flags_t {
-#ifndef HAVE_NDO_SET_FEATURES
+#if defined(HAVE_RHEL6_NET_DEVICE_OPS_EXT) || !defined(HAVE_NDO_SET_FEATURES)
 	IGB_RING_FLAG_RX_CSUM,
 #endif
 	IGB_RING_FLAG_RX_SCTP_CSUM,
@@ -555,6 +555,8 @@ struct igb_adapter {
 	u16 link_speed;
 	u16 link_duplex;
 	u8 port_num;
+
+	u8 __iomem *io_addr; /* for iounmap */
 
 	/* Interrupt Throttle Rate */
 	u32 rx_itr_setting;

@@ -83,6 +83,7 @@
 #define E1000_PBA	0x01000  /* Packet Buffer Allocation - RW */
 #define E1000_PBS	0x01008  /* Packet Buffer Size */
 #define E1000_EEMNGCTL	0x01010  /* MNG EEprom Control */
+#define E1000_EEMNGCTL_I210	0x01010  /* i210 MNG EEprom Mode Control */
 #define E1000_EEARBC	0x01024  /* EEPROM Auto Read Bus Control */
 #define E1000_EEARBC_I210	0x12024 /* EEPROM Auto Read Bus Control */
 #define E1000_EEWR	0x0102C  /* EEPROM Write Register - RW */
@@ -149,6 +150,23 @@
 /* QAV Tx mode control register */
 #define E1000_I210_TQAVCTRL	0x3570
 #define E1000_DTXMXPKTSZ	0x0355C
+/* QAV Tx mode control register bitfields masks */
+/* QAV enable */
+#define E1000_TQAVCTRL_MODE			(1 << 0)
+/* Fetching arbitration type */
+#define E1000_TQAVCTRL_FETCH_ARB		(1 << 4)
+/* Fetching timer enable */
+#define E1000_TQAVCTRL_FETCH_TIMER_ENABLE	(1 << 5)
+/* Launch arbitration type */
+#define E1000_TQAVCTRL_LAUNCH_ARB		(1 << 8)
+/* Launch timer enable */
+#define E1000_TQAVCTRL_LAUNCH_TIMER_ENABLE	(1 << 9)
+/* SP waits for SR enable */
+#define E1000_TQAVCTRL_SP_WAIT_SR		(1 << 10)
+/* Fetching timer correction */
+#define E1000_TQAVCTRL_FETCH_TIMER_DELTA_OFFSET	16
+#define E1000_TQAVCTRL_FETCH_TIMER_DELTA	\
+			(0xFFFF << E1000_TQAVCTRL_FETCH_TIMER_DELTA_OFFSET)
 
 /* High credit registers where _n can be 0 or 1. */
 #define E1000_I210_TQAVHC(_n)			(0x300C + 0x40 * (_n))
