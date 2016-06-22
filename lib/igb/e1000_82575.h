@@ -1,26 +1,36 @@
-/*******************************************************************************
+/******************************************************************************
 
-  Intel(R) Gigabit Ethernet Linux driver
-  Copyright(c) 2007-2015 Intel Corporation.
+  Copyright (c) 2001-2012, Intel Corporation
+  All rights reserved.
 
-  This program is free software; you can redistribute it and/or modify it
-  under the terms and conditions of the GNU General Public License,
-  version 2, as published by the Free Software Foundation.
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are met:
 
-  This program is distributed in the hope it will be useful, but WITHOUT
-  ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
-  FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
-  more details.
+   1. Redistributions of source code must retain the above copyright notice,
+      this list of conditions and the following disclaimer.
 
-  The full GNU General Public License is included in this distribution in
-  the file called "COPYING".
+   2. Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
 
-  Contact Information:
-  Linux NICS <linux.nics@intel.com>
-  e1000-devel Mailing List <e1000-devel@lists.sourceforge.net>
-  Intel Corporation, 5200 N.E. Elam Young Parkway, Hillsboro, OR 97124-6497
+   3. Neither the name of the Intel Corporation nor the names of its
+      contributors may be used to endorse or promote products derived from
+      this software without specific prior written permission.
 
-*******************************************************************************/
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+  LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  POSSIBILITY OF SUCH DAMAGE.
+
+******************************************************************************/
+/*$FreeBSD$*/
 
 #ifndef _E1000_82575_H_
 #define _E1000_82575_H_
@@ -47,6 +57,7 @@
 #define E1000_STAT_DEV_RST_SET	0x00100000
 #define E1000_CTRL_DEV_RST	0x20000000
 
+#ifdef E1000_BIT_FIELDS
 struct e1000_adv_data_desc {
 	__le64 buffer_addr;    /* Address of the descriptor's data buffer */
 	union {
@@ -109,6 +120,7 @@ struct e1000_adv_context_desc {
 		} fields;
 	} l4_setup;
 };
+#endif
 
 /* SRRCTL bit definitions */
 #define E1000_SRRCTL_BSIZEPKT_SHIFT		10 /* Shift _right_ */
@@ -233,8 +245,6 @@ union e1000_adv_rx_desc {
 #define E1000_RXDADV_RSSTYPE_IPV6_UDP_EX 0x00000009
 
 /* RSS Packet Types as indicated in the receive descriptor */
-#define E1000_RXDADV_PKTTYPE_ILMASK	0x000000F0
-#define E1000_RXDADV_PKTTYPE_TLMASK	0x00000F00
 #define E1000_RXDADV_PKTTYPE_NONE	0x00000000
 #define E1000_RXDADV_PKTTYPE_IPV4	0x00000010 /* IPV4 hdr present */
 #define E1000_RXDADV_PKTTYPE_IPV4_EX	0x00000020 /* IPV4 hdr + extensions */
@@ -350,13 +360,10 @@ struct e1000_adv_tx_context_desc {
 #define E1000_DCA_RXCTRL_DESC_DCA_EN	(1 << 5) /* DCA Rx Desc enable */
 #define E1000_DCA_RXCTRL_HEAD_DCA_EN	(1 << 6) /* DCA Rx Desc header ena */
 #define E1000_DCA_RXCTRL_DATA_DCA_EN	(1 << 7) /* DCA Rx Desc payload ena */
-#define E1000_DCA_RXCTRL_DESC_RRO_EN	(1 << 9) /* DCA Rx Desc Relax Order */
 
 #define E1000_DCA_TXCTRL_CPUID_MASK	0x0000001F /* Tx CPUID Mask */
 #define E1000_DCA_TXCTRL_DESC_DCA_EN	(1 << 5) /* DCA Tx Desc enable */
-#define E1000_DCA_TXCTRL_DESC_RRO_EN	(1 << 9) /* Tx rd Desc Relax Order */
 #define E1000_DCA_TXCTRL_TX_WB_RO_EN	(1 << 11) /* Tx Desc writeback RO bit */
-#define E1000_DCA_TXCTRL_DATA_RRO_EN	(1 << 13) /* Tx rd data Relax Order */
 
 #define E1000_DCA_TXCTRL_CPUID_MASK_82576	0xFF000000 /* Tx CPUID Mask */
 #define E1000_DCA_RXCTRL_CPUID_MASK_82576	0xFF000000 /* Rx CPUID Mask */
@@ -468,27 +475,20 @@ void e1000_vmdq_set_loopback_pf(struct e1000_hw *hw, bool enable);
 void e1000_vmdq_set_anti_spoofing_pf(struct e1000_hw *hw, bool enable, int pf);
 void e1000_vmdq_set_replication_pf(struct e1000_hw *hw, bool enable);
 s32 e1000_init_nvm_params_82575(struct e1000_hw *hw);
-s32  e1000_init_hw_82575(struct e1000_hw *hw);
 
+enum e1000_promisc_type {
+	e1000_promisc_disabled = 0,   /* all promisc modes disabled */
+	e1000_promisc_unicast = 1,    /* unicast promiscuous enabled */
+	e1000_promisc_multicast = 2,  /* multicast promiscuous enabled */
+	e1000_promisc_enabled = 3,    /* both uni and multicast promisc */
+	e1000_num_promisc_types
+};
+
+void e1000_vfta_set_vf(struct e1000_hw *, u16, bool);
+void e1000_rlpml_set_vf(struct e1000_hw *, u16);
+s32 e1000_promisc_set_vf(struct e1000_hw *, enum e1000_promisc_type type);
 u16 e1000_rxpbs_adjust_82580(u32 data);
-s32 e1000_read_emi_reg(struct e1000_hw *hw, u16 addr, u16 *data);
-s32 e1000_set_eee_i350(struct e1000_hw *hw, bool adv1G, bool adv100M);
-s32 e1000_set_eee_i354(struct e1000_hw *hw, bool adv1G, bool adv100M);
-s32 e1000_get_eee_status_i354(struct e1000_hw *, bool *);
-s32 e1000_initialize_M88E1512_phy(struct e1000_hw *hw);
-s32 e1000_initialize_M88E1543_phy(struct e1000_hw *hw);
-#define E1000_I2C_THERMAL_SENSOR_ADDR	0xF8
-#define E1000_EMC_INTERNAL_DATA		0x00
-#define E1000_EMC_INTERNAL_THERM_LIMIT	0x20
-#define E1000_EMC_DIODE1_DATA		0x01
-#define E1000_EMC_DIODE1_THERM_LIMIT	0x19
-#define E1000_EMC_DIODE2_DATA		0x23
-#define E1000_EMC_DIODE2_THERM_LIMIT	0x1A
-#define E1000_EMC_DIODE3_DATA		0x2A
-#define E1000_EMC_DIODE3_THERM_LIMIT	0x30
-
-s32 e1000_get_thermal_sensor_data_generic(struct e1000_hw *hw);
-s32 e1000_init_thermal_sensor_thresh_generic(struct e1000_hw *hw);
+s32 e1000_set_eee_i350(struct e1000_hw *);
 
 /* I2C SDA and SCL timing parameters for standard mode */
 #define E1000_I2C_T_HD_STA	4
