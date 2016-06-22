@@ -2396,7 +2396,6 @@ static int igb_ndo_bridge_getlink(struct sk_buff *skb, u32 pid, u32 seq,
 #endif /* HAVE_BRIDGE_ATTRIBS */
 #endif /* HAVE_FDB_OPS */
 
-#endif /* HAVE_NDO_SET_FEATURES */
 #ifdef HAVE_NET_DEVICE_OPS
 static const struct net_device_ops igb_netdev_ops = {
 	.ndo_open		= igb_open,
@@ -2892,7 +2891,6 @@ static int igb_probe(struct pci_dev *pdev,
 	/* this is only needed on kernels prior to 2.6.39 */
 	netdev->features |= NETIF_F_GRO;
 #endif /* NETIF_F_GRO */
-#endif /* HAVE_NDO_SET_FEATURES */
 
 	/* set this bit last since it cannot be part of hw_features */
 #ifdef NETIF_F_HW_VLAN_CTAG_FILTER
