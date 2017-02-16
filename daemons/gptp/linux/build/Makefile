@@ -30,7 +30,7 @@
 
 ALTERNATE_LINUX_INCPATH=$(HOME)/header/include/
 
-CFLAGS_G = -Wall -std=c++0x -g -I. -I../../common -I../src \
+CFLAGS_G = -Wall -g -I. -I../../common -I../src \
 	-I$(ALTERNATE_LINUX_INCPATH)
 
 # Check to see if PTP cross-timestamping is supported in hardware/driver
@@ -39,16 +39,15 @@ CFLAGS_G = -Wall -std=c++0x -g -I. -I../../common -I../src \
 PRECISE_TIME_TEST = "\#include <linux/ptp_clock.h>\\n\
 \#ifdef PTP_SYS_OFFSET_PRECISE\\nint main(){return 0;}\\n\#endif"
 
-HAS_PRECISE_TIME = $(shell echo $(PRECISE_TIME_TEST) | gcc -xc - \
+HAS_PRECISE_TIME = $(shell echo $(PRECISE_TIME_TEST) | $(CC) -xc - \
 -I$(ALTERNATE_LINUX_INCPATH) -o /dev/null > /dev/null 2>&1 ; echo $$?)
 
 ifeq ($(HAS_PRECISE_TIME),0)
        CFLAGS_G += -DPTP_HW_CROSSTSTAMP
 endif
 
-CPPFLAGS_G = $(CFLAGS_G) -Wnon-virtual-dtor
-
-LDFLAGS_G = -lpthread -lrt
+CPPFLAGS_G = $(CFLAGS_G) -std=c++0x -Wnon-virtual-dtor
+LDFLAGS_G = 
 
 COMMON_DIR = ../../common
 SRC_DIR = ../src
@@ -111,6 +110,15 @@ else
 		$(OBJ_DIR)/linux_hal_generic_adj.o
 	HEADER_FILES += $(SRC_DIR)/linux_hal_generic.hpp
 endif
+
+ifeq ($(GENIVI_DLT),1)
+	GENIVI_DLT_INCLUDE_PATH=/usr/local/include/dlt/
+	GENIVI_DLT_LIB_PATH=/usr/local/lib/x86_64-linux-gnu/static/
+	CFLAGS_G += -I$(GENIVI_DLT_INCLUDE_PATH) -DGENIVI_DLT
+	LDFLAGS_G += -ldlt -L$(GENIVI_DLT_LIB_PATH)
+endif
+
+LDFLAGS_G += -lpthread -lrt
 
 CFLAGS = $(CFLAGS_G)
 CPPFLAGS = $(CPPFLAGS_G)

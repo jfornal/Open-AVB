@@ -43,6 +43,7 @@
 #else
 #include "linux_hal_generic.hpp"
 #endif
+
 #include "linux_hal_persist_file.hpp"
 #include <ctype.h>
 #include <inttypes.h>
@@ -65,7 +66,7 @@ void gPTPPersistWriteCB(char *bufPtr, uint32_t bufSize);
 void print_usage( char *arg0 ) {
 	fprintf( stderr,
 			"%s <network interface> [-S] [-P] [-M <filename>] "
-			"[-A <count>] [-G <group>] [-R <priority 1>] "
+			"[-G <group>] [-R <priority 1>] "
 			"[-D <gb_tx_delay,gb_rx_delay,mb_tx_delay,mb_rx_delay>] "
 			"[-T] [-L] [-E] [-GM] [-INITSYNC <value>] [-OPERSYNC <value>] "
 			"[-INITPDELAY <value>] [-OPERPDELAY <value>] "
@@ -77,7 +78,6 @@ void print_usage( char *arg0 ) {
 		  "\t-S start syntonization\n"
 		  "\t-P pulse per second\n"
 		  "\t-M <filename> save/restore state\n"
-		  "\t-A <count> initial accelerated sync count\n"
 		  "\t-G <group> group id for shared memory\n"
 		  "\t-R <priority 1> priority 1 value\n"
 		  "\t-D Phy Delay <gb_tx_delay,gb_rx_delay,mb_tx_delay,mb_rx_delay>\n"
@@ -99,8 +99,6 @@ static IEEE1588Port *pPort = NULL;
 
 int main(int argc, char **argv)
 {
-	GPTP_LOG_INFO("gPTP starting");
-
 	IEEE1588PortInit_t portInit;
 
 	sigset_t set;
@@ -112,7 +110,7 @@ int main(int argc, char **argv)
 	bool pps = false;
 	uint8_t priority1 = 248;
 	bool override_portstate = false;
-	PortState port_state;
+	PortState port_state = PTP_SLAVE;
 
 	char *restoredata = NULL;
 	char *restoredataptr = NULL;
@@ -120,17 +118,32 @@ int main(int argc, char **argv)
 	off_t restoredatacount = 0;
 	bool restorefailed = false;
 	LinuxIPCArg *ipc_arg = NULL;
-	int accelerated_sync_count = 0;
 	bool use_config_file = false;
 	char config_file_path[512];
 	memset(config_file_path, 0, 512);
 
 	GPTPPersist *pGPTPPersist = NULL;
 
+	// Block SIGUSR1
+	{
+		sigset_t block;
+		sigemptyset( &block );
+		sigaddset( &block, SIGUSR1 );
+		if( pthread_sigmask( SIG_BLOCK, &block, NULL ) != 0 ) {
+			GPTP_LOG_ERROR("Failed to block SIGUSR1");
+			return -1;
+		}
+	}
+
+	GPTP_LOG_REGISTER();
+	GPTP_LOG_INFO("gPTP starting");
+
+	int phy_delay[4]={0,0,0,0};
+	bool input_delay=false;
+
 	portInit.clock = NULL;
 	portInit.index = 0;
 	portInit.forceSlave = false;
-	portInit.accelerated_sync_count = 0;
 	portInit.timestamper = NULL;
 	portInit.offset = 0;
 	portInit.net_label = NULL;
@@ -145,20 +158,6 @@ int main(int argc, char **argv)
 	portInit.thread_factory = NULL;
 	portInit.timer_factory = NULL;
 	portInit.lock_factory = NULL;
-
-	// Block SIGUSR1
-	{
-		sigset_t block;
-		sigemptyset( &block );
-		sigaddset( &block, SIGUSR1 );
-		if( pthread_sigmask( SIG_BLOCK, &block, NULL ) != 0 ) {
-			fprintf( stderr, "Failed to block SIGUSR1\n" );
-			return -1;
-		}
-	}
-
-	int phy_delay[4]={0,0,0,0};
-	bool input_delay=false;
 
 	LinuxNetworkInterfaceFactory *default_factory =
 		new LinuxNetworkInterfaceFactory;
@@ -207,14 +206,6 @@ int main(int argc, char **argv)
 							"command line\n" );
 				}
 			}
-			else if( strcmp(argv[i] + 1,  "A" ) == 0 ) {
-				if( i+1 < argc ) {
-					accelerated_sync_count = atoi( argv[++i] );
-				} else {
-					printf( "Accelerated sync count must be specified on the "
-							"command line with A option\n" );
-				}
-			}
 			else if( strcmp(argv[i] + 1,  "G") == 0 ) {
 				if( i+1 < argc ) {
 					ipc_arg = new LinuxIPCArg(argv[++i]);
@@ -227,6 +218,7 @@ int main(int argc, char **argv)
 			}
 			else if( strcmp(argv[i] + 1,  "H") == 0 ) {
 				print_usage( argv[0] );
+				GPTP_LOG_UNREGISTER();
 				return 0;
 			}
 			else if( strcmp(argv[i] + 1,  "R") == 0 ) {
@@ -253,6 +245,7 @@ int main(int argc, char **argv)
 					{
 						printf("Too many values\n");
 						print_usage( argv[0] );
+						GPTP_LOG_UNREGISTER();
 						return 0;
 					}
 					phy_delay[delay_count]=atoi(cli_inp_delay);
@@ -263,6 +256,7 @@ int main(int argc, char **argv)
 				{
 					printf("All four delay values must be specified\n");
 					print_usage( argv[0] );
+					GPTP_LOG_UNREGISTER();
 					return 0;
 				}
 			}
@@ -316,7 +310,7 @@ int main(int argc, char **argv)
 	if( pGPTPPersist ) {
 		uint32_t bufSize = 0;
 		if (!pGPTPPersist->readStorage(&restoredata, &bufSize))
-			printf( "Failed to stat restore file\n");
+			GPTP_LOG_ERROR("Failed to stat restore file");
 		restoredatalength = bufSize;
 		restoredatacount = restoredatalength;
 		restoredataptr = (char *)restoredata;
@@ -335,6 +329,7 @@ int main(int argc, char **argv)
 	sigaddset(&set, SIGUSR2);
 	if (pthread_sigmask(SIG_BLOCK, &set, NULL) != 0) {
 		perror("pthread_sigmask()");
+		GPTP_LOG_UNREGISTER();
 		return -1;
 	}
 
@@ -353,7 +348,6 @@ int main(int argc, char **argv)
 	portInit.clock = pClock;
 	portInit.index = 1;
 	portInit.forceSlave = false;
-	portInit.accelerated_sync_count = accelerated_sync_count;
 	portInit.timestamper = timestamper;
 	portInit.offset = 0;
 	portInit.net_label = ifname;
@@ -369,19 +363,19 @@ int main(int argc, char **argv)
 		GptpIniParser iniParser(config_file_path);
 
 		if (iniParser.parserError() < 0) {
-			fprintf(stderr, "Cant parse ini file. Aborting file reading.\n");
+			GPTP_LOG_ERROR("Cant parse ini file. Aborting file reading.");
 		}
 		else
 		{
-			fprintf(stdout, "priority1 = %d\n", iniParser.getPriority1());
-			fprintf(stdout, "announceReceiptTimeout: %d\n", iniParser.getAnnounceReceiptTimeout());
-			fprintf(stdout, "syncReceiptTimeout: %d\n", iniParser.getSyncReceiptTimeout());
-			fprintf(stdout, "phy_delay_gb_tx: %d\n", iniParser.getPhyDelayGbTx());
-			fprintf(stdout, "phy_delay_gb_rx: %d\n", iniParser.getPhyDelayGbRx());
-			fprintf(stdout, "phy_delay_mb_tx: %d\n", iniParser.getPhyDelayMbTx());
-			fprintf(stdout, "phy_delay_mb_rx: %d\n", iniParser.getPhyDelayMbRx());
-			fprintf(stdout, "neighborPropDelayThresh: %ld\n", iniParser.getNeighborPropDelayThresh());
-			fprintf(stdout, "syncReceiptThreshold: %d\n", iniParser.getSyncReceiptThresh());
+			GPTP_LOG_INFO("priority1 = %d", iniParser.getPriority1());
+			GPTP_LOG_INFO("announceReceiptTimeout: %d", iniParser.getAnnounceReceiptTimeout());
+			GPTP_LOG_INFO("syncReceiptTimeout: %d", iniParser.getSyncReceiptTimeout());
+			GPTP_LOG_INFO("phy_delay_gb_tx: %d", iniParser.getPhyDelayGbTx());
+			GPTP_LOG_INFO("phy_delay_gb_rx: %d", iniParser.getPhyDelayGbRx());
+			GPTP_LOG_INFO("phy_delay_mb_tx: %d", iniParser.getPhyDelayMbTx());
+			GPTP_LOG_INFO("phy_delay_mb_rx: %d", iniParser.getPhyDelayMbRx());
+			GPTP_LOG_INFO("neighborPropDelayThresh: %ld", iniParser.getNeighborPropDelayThresh());
+			GPTP_LOG_INFO("syncReceiptThreshold: %d", iniParser.getSyncReceiptThresh());
 
 			/* If using config file, set the neighborPropDelayThresh.
 			 * Otherwise it will use its default value (800ns) */
@@ -405,7 +399,8 @@ int main(int argc, char **argv)
 	}
 
 	if (!pPort->init_port(phy_delay)) {
-		printf("failed to initialize port \n");
+		GPTP_LOG_ERROR("failed to initialize port");
+		GPTP_LOG_UNREGISTER();
 		return -1;
 	}
 
@@ -435,7 +430,7 @@ int main(int argc, char **argv)
 	// Start PPS if requested
 	if( pps ) {
 		if( !timestamper->HWTimestamper_PPS_start()) {
-			printf( "Failed to start pulse per second I/O\n" );
+			GPTP_LOG_ERROR("Failed to start pulse per second I/O");
 		}
 	}
 
@@ -458,6 +453,7 @@ int main(int argc, char **argv)
 
 		if (sigwait(&set, &sig) != 0) {
 			perror("sigwait()");
+			GPTP_LOG_UNREGISTER();
 			return -1;
 		}
 
@@ -475,7 +471,7 @@ int main(int argc, char **argv)
 		}
 	} while (sig == SIGHUP || sig == SIGUSR2);
 
-	fprintf(stderr, "Exiting on %d\n", sig);
+	GPTP_LOG_ERROR("Exiting on %d", sig);
 
 	if (pGPTPPersist) {
 		pGPTPPersist->closeStorage();
@@ -484,12 +480,13 @@ int main(int argc, char **argv)
 	// Stop PPS if previously started
 	if( pps ) {
 		if( !timestamper->HWTimestamper_PPS_stop()) {
-			printf( "Failed to stop pulse per second I/O\n" );
+			GPTP_LOG_ERROR("Failed to stop pulse per second I/O");
 		}
 	}
 
 	if( ipc ) delete ipc;
 
+	GPTP_LOG_UNREGISTER();
 	return 0;
 }
 
@@ -499,7 +496,7 @@ void gPTPPersistWriteCB(char *bufPtr, uint32_t bufSize)
 	off_t restoredatacount = restoredatalength;
 	char *restoredataptr = NULL;
 
-	printf("Signal received to write restore data\n");
+	GPTP_LOG_INFO("Signal received to write restore data");
 
 	restoredataptr = (char *)bufPtr;
 	pClock->serializeState(restoredataptr, &restoredatacount);

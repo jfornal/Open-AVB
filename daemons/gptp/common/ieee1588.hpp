@@ -65,6 +65,7 @@
 class LinkLayerAddress;
 struct ClockQuality;
 class PortIdentity;
+class PTPMessageId;
 class PTPMessageCommon;
 class PTPMessageSync;
 class PTPMessageAnnounce;
@@ -379,9 +380,11 @@ public:
 #define INVALID_TIMESTAMP (Timestamp( 0xC0000000, 0, 0 ))	/*!< Defines an invalid timestamp using a Timestamp instance and a fixed value*/
 #define PDELAY_PENDING_TIMESTAMP (Timestamp( 0xC0000001, 0, 0 ))	/*!< PDelay is pending timestamp */
 
-#define TIMESTAMP_TO_NS(ts) (((static_cast<long long int>((ts).seconds_ms) \
-			       << sizeof((ts).seconds_ls)*8) + \
-			      (ts).seconds_ls)*1000000000LL + (ts).nanoseconds)		/*!< Converts timestamp value into nanoseconds value*/
+static inline uint64_t TIMESTAMP_TO_NS(Timestamp &ts)
+{
+	return (((static_cast<long long int>(ts.seconds_ms) << sizeof(ts.seconds_ls)*8) +
+			      ts.seconds_ls)*1000000000LL + ts.nanoseconds)	;	/*!< Converts timestamp value into nanoseconds value*/
+}
 
 /**
  * @brief  Swaps out byte-a-byte a 64 bit value
@@ -478,6 +481,13 @@ public:
 		{ return true; }
 
 	/**
+	 * @brief Reset the hardware timestamp unit
+	 * @return void
+	 */
+	virtual void HWTimestamper_reset(void) {
+	}
+
+	/**
 	 * @brief  This method is called before the object is de-allocated.
 	 * @return void
 	 */
@@ -521,14 +531,14 @@ public:
 	/**
 	 * @brief  Gets the tx timestamp from hardware
 	 * @param  identity PTP port identity
-	 * @param  sequenceId Sequence ID
+	 * @param  PTPMessageId Message ID
 	 * @param  timestamp [out] Timestamp value
 	 * @param  clock_value [out] Clock value
 	 * @param  last Signalizes that it is the last timestamp to get. When TRUE, releases the lock when its done.
 	 * @return GPTP_EC_SUCCESS if no error, GPTP_EC_FAILURE if error and GPTP_EC_EAGAIN to try again.
 	 */
 	virtual int HWTimestamper_txtimestamp(PortIdentity * identity,
-			uint16_t sequenceId,
+			PTPMessageId messageId,
 			Timestamp & timestamp,
 			unsigned &clock_value,
 			bool last) = 0;
@@ -536,14 +546,14 @@ public:
 	/**
 	 * @brief  Get rx timestamp
 	 * @param  identity PTP port identity
-	 * @param  sequenceId Sequence ID
+	 * @param  messageId Message ID
 	 * @param  timestamp [out] Timestamp value
 	 * @param  clock_value [out] Clock value
 	 * @param  last Signalizes that it is the last timestamp to get. When TRUE, releases the lock when its done.
 	 * @return GPTP_EC_SUCCESS if no error, GPTP_EC_FAILURE if error and GPTP_EC_EAGAIN to try again.
 	 */
 	virtual int HWTimestamper_rxtimestamp(PortIdentity * identity,
-			uint16_t sequenceId,
+			PTPMessageId messageId,
 			Timestamp & timestamp,
 			unsigned &clock_value,
 			bool last) = 0;

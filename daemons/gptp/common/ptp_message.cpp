@@ -69,6 +69,7 @@ PTPMessageCommon *buildPTPMessage
 {
 	OSTimer *timer = port->getTimerFactory()->createTimer();
 	PTPMessageCommon *msg = NULL;
+	PTPMessageId messageId;
 	MessageType messageType;
 	unsigned char tspec_msg_t = 0;
 	unsigned char transportSpecific = 0;
@@ -113,13 +114,16 @@ PTPMessageCommon *buildPTPMessage
 	sequenceId = PLAT_ntohs(sequenceId);
 
 	GPTP_LOG_VERBOSE("Captured Sequence Id: %u", sequenceId);
+	messageId.setMessageType(messageType);
+	messageId.setSequenceId(sequenceId);
+
 
 	if (!(messageType >> 3)) {
 		int iter = 5;
 		long req = 4000;	// = 1 ms
 		int ts_good =
 		    port->getRxTimestamp
-			(sourcePortIdentity, sequenceId, timestamp, counter_value, false);
+			(sourcePortIdentity, messageId, timestamp, counter_value, false);
 		while (ts_good != GPTP_EC_SUCCESS && iter-- != 0) {
 			// Waits at least 1 time slice regardless of size of 'req'
 			timer->sleep(req);
@@ -128,7 +132,7 @@ PTPMessageCommon *buildPTPMessage
 					"Error (RX) timestamping RX event packet (Retrying), error=%d",
 					  ts_good );
 			ts_good =
-			    port->getRxTimestamp(sourcePortIdentity, sequenceId,
+			    port->getRxTimestamp(sourcePortIdentity, messageId,
 						 timestamp, counter_value,
 						 iter == 0);
 			req *= 2;
@@ -157,7 +161,7 @@ PTPMessageCommon *buildPTPMessage
 	switch (messageType) {
 	case SYNC_MESSAGE:
 
-		GPTP_LOG_DEBUG("*** Received Sync message\n" );
+		GPTP_LOG_DEBUG("*** Received Sync message" );
 		GPTP_LOG_VERBOSE("Sync RX timestamp = %hu,%u,%u", timestamp.seconds_ms, timestamp.seconds_ls, timestamp.nanoseconds );
 
 		// Be sure buffer is the correction size
@@ -279,7 +283,7 @@ PTPMessageCommon *buildPTPMessage
 		break;
 	case PATH_DELAY_RESP_MESSAGE:
 
-		GPTP_LOG_DEBUG("*** Received PDelay Response message, %u, %u, %u",
+		GPTP_LOG_DEBUG("*** Received PDelay Response message, Timestamp %u (sec) %u (ns), seqID %u",
 			   timestamp.seconds_ls, timestamp.nanoseconds,
 			   sequenceId);
 
@@ -1012,7 +1016,7 @@ void PTPMessageFollowUp::processMessage(IEEE1588Port * port)
 	scalar_offset -= TIMESTAMP_TO_NS( preciseOriginTimestamp );
 
 	GPTP_LOG_VERBOSE
-		("Followup Correction Field: %Ld,%lu", correctionField >> 16,
+		("Followup Correction Field: %Ld, Link Delay: %lu", correctionField,
 		 delay);
 	GPTP_LOG_VERBOSE
 		("FollowUp Scalar = %lld", scalar_offset);
@@ -1156,7 +1160,7 @@ void PTPMessagePathDelayReq::processMessage(IEEE1588Port * port)
 	port->getTxLock();
 	resp->sendPort(port, sourcePortIdentity);
 
-	GPTP_LOG_DEBUG("Sent path delay response");
+	GPTP_LOG_DEBUG("*** Sent PDelay Response message");
 
 	GPTP_LOG_VERBOSE("Start TS Read");
 	ts_good = port->getTxTimestamp
@@ -1219,7 +1223,7 @@ void PTPMessagePathDelayReq::processMessage(IEEE1588Port * port)
 	resp_fwup->setCorrectionField(0);
 	resp_fwup->sendPort(port, sourcePortIdentity);
 
-	GPTP_LOG_DEBUG("Sent path delay response fwup");
+	GPTP_LOG_DEBUG("*** Sent PDelay Response FollowUp message");
 
 	delete resp;
 	delete resp_fwup;
@@ -1734,7 +1738,7 @@ void PTPMessagePathDelayRespFollowUp::setRequestingPortIdentity
 	messageType = SIGNALLING_MESSAGE;
 	sequenceId = port->getNextSignalSequenceId();
 
-	targetPortIdentify = 0xff;
+	targetPortIdentify = (int8_t)0xff;
 
 	control = MESSAGE_OTHER;
 
