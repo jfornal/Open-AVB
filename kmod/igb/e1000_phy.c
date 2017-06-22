@@ -1144,6 +1144,13 @@ s32 e1000_copper_link_setup_bcm89611(struct e1000_hw *hw)
 	/* Enable SGMII Slave */
 	e1000_write_phy_reg_bcm_s1c(hw, 0x15, 0x0182); /* SGMII Slave Shadow Register */
 	phy->ops.read_reg(hw, 0x1C, &reg);
+	
+	/*Intel debug purposes - enabling SGMII loopback mode
+ 	* hw - pointer to hardware structure
+	* 0x44 - offset to expansio register
+	* 0x34 - value to be written to expansion reg via 0x15h reg - bits 2,3 and 5 set to 1
+ 	*/
+	e1000_write_phy_reg_bcm_exp(hw, 0x44, 0x34);
 
 	/* deisolate PHY bridge and set to 100Mb/Full forced */
 	phy->ops.write_reg(hw, 0x00, 0x2100);
