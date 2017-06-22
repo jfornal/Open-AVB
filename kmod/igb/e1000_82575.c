@@ -242,41 +242,26 @@ static s32 e1000_init_phy_params_82575(struct e1000_hw *hw)
 	}
 
 	/* Set phy->phy_addr and phy->id. */
-	phy->addr = 0;
-	ret_val = e1000_get_phy_id_82575(hw);
-	
-	printk(KERN_INFO "LGE_INFO: ?????????????????????????? igb_avb - SGMII BRCM PHY ID = 0x%x, phy->addr = 0x%x", phy->id, phy->addr);
-	phy->addr = 1;
 	ret_val = e1000_get_phy_id_82575(hw);
 
-	printk(KERN_INFO "LGE_INFO: !!!!!!!!!!!!!!!!!!!!!!!!!! igb_avb - SGMII BRCM PHY ID = 0x%x, phy->addr = 0x%x", phy->id, phy->addr);
-
-/* Tag: LGE_V@_IPC+ */
+/*
 	if (!e1000_sgmii_active_82575(hw) || e1000_sgmii_uses_mdio_82575(hw)) {
 		switch(hw->mac.type) {
 			case e1000_i210:
 			case e1000_i211:
-				if(phy->id == BCM89811_E_PHY_ID) {
-				//if(phy->id == BCM89611_E_PHY_ID) {
+				if(phy->id == BCM89611_E_PHY_ID) {
 					phy->autoneg_mask   = 0;
 					printk(KERN_INFO "LGE_INFO: igb_avb - SGMII BRCM PHY ID = 0x%x, phy->autoneg_mask = %d", phy->id, phy->autoneg_mask);
 				} else {
 					phy->ops.read_reg  = e1000_read_phy_reg_gs40g;
 					phy->ops.write_reg = e1000_write_phy_reg_gs40g;
-					printk(KERN_INFO "LGE_INFO: igb_avb (1) NOT !!! SGMII BRCM PHY ID, phy->id = 0x%x, phy->addr = 0x%x", phy->id, phy->addr);
-/*					
-					phy->addr = 1;
-					ret_val = e1000_get_phy_id_82575(hw);
-
-					printk(KERN_INFO "LGE_INFO: igb_avb (2) NOT !!! BRCM PHY ID, phy->id = 0x%x, phy->addr = 0x%x", phy->id, phy->addr);
-*/
 				}
 				break;
 			default:
 				break;
 		}
 	}
-/* Tag: LGE_V@_IPC- */
+ */
 
 	/* Verify phy id and set remaining function pointers */
 	printk(KERN_INFO "igb_avb phy_id %x", phy->id);
@@ -356,20 +341,17 @@ static s32 e1000_init_phy_params_82575(struct e1000_hw *hw)
 			phy->ops.force_speed_duplex = e1000_phy_force_speed_duplex_m88;
 			break;
 /* Tag: LGE_V@_IPC+ */
-		case BCM89811_E_PHY_ID:
+		case BCM89611_E_PHY_ID:
 		default:
 			printk(KERN_INFO "LGE_INFO: igb_avb initialize BRCM PHY");
-			phy->type		= e1000_phy_bcm89811;
-			ret_val = e1000_initialize_BCM89811_phy(hw);
+			phy->type = e1000_phy_bcm89611;
+			phy->autoneg_mask = 0;
+			printk(KERN_INFO "LGE_INFO: igb_avb - SGMII BRCM PHY ID = 0x%x, phy->autoneg_mask = %d", phy->id, phy->autoneg_mask);
+			ret_val = e1000_initialize_BCM89611_phy(hw);
 			if (ret_val)
 				goto out;
 			break;
-/* Tag: LGE_V@_IPC- */
-/*	
-		default:
-			ret_val = -E1000_ERR_PHY;
-			goto out;
-*/	
+/* Tag: LGE_V@_IPC- */	
 	}
 
 out:
@@ -720,10 +702,8 @@ static s32 e1000_get_phy_id_82575(struct e1000_hw *hw)
 {
 	struct e1000_phy_info *phy = &hw->phy;
 	s32  ret_val = E1000_SUCCESS;
-	u16 phy_id;
 	u32 ctrl_ext;
 	u32 mdic;
-	u32 mdicnfg;
 
 	DEBUGFUNC("e1000_get_phy_id_82575");
 
@@ -740,7 +720,7 @@ static s32 e1000_get_phy_id_82575(struct e1000_hw *hw)
 	 */
 	if (!e1000_sgmii_active_82575(hw)) {
 		printk(KERN_INFO "igb_avb e1000_get_phy_id_82575:: !sgmii_active");
-		//phy->addr = 1;
+		phy->addr = 1;
 		ret_val = e1000_get_phy_id(hw);
 		printk(KERN_INFO "igb_avb e1000_get_phy_id_82575:: phy->addr %d", phy->addr);
 		goto out;
@@ -761,15 +741,13 @@ static s32 e1000_get_phy_id_82575(struct e1000_hw *hw)
 		case e1000_i211:
 			printk(KERN_INFO "igb_avb e1000_get_phy_id_82575 phy->addr about to be read from mdic");
 #ifdef EXT_MDIO
-//			phy->addr = phy_addr;
-//#else
-			mdicnfg = E1000_READ_REG(hw, E1000_MDICNFG);
-		//	mdicnfg &= E1000_MDICNFG_PHY_MASK;
-			mdicnfg = mdicnfg | E1000_MDICNFG_EXT_MDIO;
-			//phy->addr = mdicnfg >> E1000_MDICNFG_PHY_SHIFT;		
-			E1000_WRITE_REG(hw, E1000_MDICNFG, mdicnfg);
+			phy->addr = phy_addr;
+#else
+			mdic = E1000_READ_REG(hw, E1000_MDICNFG);
+			mdic &= E1000_MDICNFG_PHY_MASK;
+			phy->addr = mdicnfg >> E1000_MDICNFG_PHY_SHIFT;		
 #endif
-			printk(KERN_INFO "igb_avb e1000_get_phy_id_82575, phy->addr read from mdic %d, mdicnfg %x ", phy->addr, mdicnfg);
+			printk(KERN_INFO "igb_avb e1000_get_phy_id_82575, phy->addr read from mdic %d ", phy->addr);
 
 			break;
 		default:
@@ -792,6 +770,9 @@ static s32 e1000_get_phy_id_82575(struct e1000_hw *hw)
 	 * The address field in the I2CCMD register is 3 bits and 0 is invalid.
 	 * Therefore, we need to test 1-7
 	 */
+
+/*Code not used in case of LGE configuration*/
+#ifndef LGE
 	for (phy->addr = 1; phy->addr < 8; phy->addr++) {
 		ret_val = e1000_read_phy_reg_sgmii_82575(hw, PHY_ID1, &phy_id);
 		if (ret_val == E1000_SUCCESS) {
@@ -816,6 +797,7 @@ static s32 e1000_get_phy_id_82575(struct e1000_hw *hw)
 	} else {
 		ret_val = e1000_get_phy_id(hw);
 	}
+#endif
 
 	/* restore previous sfp cage power state */
 	E1000_WRITE_REG(hw, E1000_CTRL_EXT, ctrl_ext);
@@ -851,26 +833,24 @@ static s32 e1000_phy_hw_reset_sgmii_82575(struct e1000_hw *hw)
 	 * SFP documentation requires the following to configure the SPF module
 	 * to work on SGMII.  No further documentation is given.
 	 */
-/* Tag: LGE_V@_IPC+ */
-	if (phy->id != BCM89811_E_PHY_ID) {
+
+	if (phy->id != BCM89611_E_PHY_ID) {
         printk(KERN_INFO "LGE_INFO: igb_avb - not BCM89611");
 		ret_val = hw->phy.ops.write_reg(hw, 0x1B, 0x8084);
 	if (ret_val)
 		goto out;
 	}
-/* Tag: LGE_V@_IPC- */
+
 	ret_val = hw->phy.ops.commit(hw);
 	if (ret_val)
 		goto out;
 
 	if (phy->id == M88E1512_E_PHY_ID)
 		ret_val = e1000_initialize_M88E1512_phy(hw);
-/* Tag: LGE_V@_IPC+ */
-	else if (phy->id == BCM89811_E_PHY_ID) {
+	else if (phy->id == BCM89611_E_PHY_ID) {
 		printk(KERN_INFO "LGE_INFO: igb_avb BCM89611");
-		ret_val = e1000_initialize_BCM89811_phy(hw);
+		ret_val = e1000_initialize_BCM89611_phy(hw);
 	}
-/* Tag: LGE_V@_IPC- */
 out:
 	return ret_val;
 }
@@ -1689,12 +1669,10 @@ static s32 e1000_setup_copper_link_82575(struct e1000_hw *hw)
 	case e1000_phy_82580:
 		ret_val = e1000_copper_link_setup_82577(hw);
 		break;
-/* Tag: LGE_V@_IPC+ */
-	case e1000_phy_bcm89811:
-                printk(KERN_INFO "LGE_INFO: igb_avb copper link setup BRCM89811");
+	case e1000_phy_bcm89611:
+                printk(KERN_INFO "LGE_INFO: igb_avb copper link setup BRCM89611");
 		ret_val = e1000_copper_link_setup_bcm89811(hw);
 		break;
-/* Tag: LGE_V@_IPC- */
 	default:
 		ret_val = -E1000_ERR_PHY;
 		break;
@@ -1758,64 +1736,36 @@ static s32 e1000_setup_serdes_link_82575(struct e1000_hw *hw)
 	switch (ctrl_ext & E1000_CTRL_EXT_LINK_MODE_MASK) {
 	case E1000_CTRL_EXT_LINK_MODE_SGMII:
 
-/* Tag: LGE_V@_IPC+ */
-		//if(i82544->force_pcs) {
-		if(1) {
-			printk(KERN_INFO "LGE_INFO: igb_avb Forcing i210 SGMII speed/duplex");
-			//slogf (_SLOGC_NETWORK, _SLOG_WARNING, "%s: Forcing i210 SGMII speed/duplex", __FUNCTION__);
+/* Tag: LGE_V@_IPC+*/
+#ifdef LGE			
+	printk(KERN_INFO "LGE_INFO: igb_avb Forcing i210 SGMII speed/duplex");
+	/* disable auto-neg and clear speed/duplex/flowcontrol */
+	pcs_autoneg = FALSE;
+	ctrl_reg &= ~(E1000_CTRL_SPD_SEL | E1000_CTRL_FD);
+	ctrl_reg &= ~(E1000_CTRL_TFCE | E1000_CTRL_RFCE); /* disable flow control */
+	/* clear PCS forced speed/duplex values, forced Flow Control */
+	reg &= ~(E1000_PCS_LCTL_FSV_10 | E1000_PCS_LCTL_FSV_100 | E1000_PCS_LCTL_FSV_1000 | E1000_PCS_LCTL_FDV_FULL | E1000_PCS_LCTL_FORCE_FCTRL);
 
-			/* disable auto-neg and clear speed/duplex/flowcontrol */
-			pcs_autoneg = FALSE;
-			ctrl_reg &= ~(E1000_CTRL_SPD_SEL | E1000_CTRL_FD);
-			ctrl_reg &= ~(E1000_CTRL_TFCE | E1000_CTRL_RFCE); /* disable flow control */
+	/* enable PCS forced speed/duplex */
+	reg |= E1000_PCS_LCTL_FSD;
 
-			/* clear PCS forced speed/duplex values, forced Flow Control */
-			reg &= ~(E1000_PCS_LCTL_FSV_10 | E1000_PCS_LCTL_FSV_100 | E1000_PCS_LCTL_FSV_1000 | E1000_PCS_LCTL_FDV_FULL | E1000_PCS_LCTL_FORCE_FCTRL);
+	/* forcing Full or Half Duplex? */
+	if (hw->mac.forced_speed_duplex & E1000_ALL_HALF_DUPLEX) {
+	    ctrl_reg |= E1000_CTRL_FRCDPX;
+	    printk(KERN_INFO "LGE_INFO: igb_avb PCS Half Duplex");
+	} else {
+	    ctrl_reg |= E1000_CTRL_FD | E1000_CTRL_FRCDPX;
+	    reg |= E1000_PCS_LCTL_FDV_FULL;
+	    printk(KERN_INFO "LGE_INFO: igb_avb PCS Full Duplex");
+	}
 
-			/* enable PCS forced speed/duplex */
-			reg |= E1000_PCS_LCTL_FSD;
-
-			/* forcing Full or Half Duplex? */
-			if (hw->mac.forced_speed_duplex & E1000_ALL_HALF_DUPLEX) {
-				ctrl_reg |= E1000_CTRL_FRCDPX;
-				//DEBUGOUT("PCS Half Duplex\n");
-				printk(KERN_INFO "LGE_INFO: igb_avb PCS Half Duplex");
-			} else {
-				ctrl_reg |= E1000_CTRL_FD | E1000_CTRL_FRCDPX;
-				reg |= E1000_PCS_LCTL_FDV_FULL;
-				//DEBUGOUT("PCS Full Duplex\n");
-				printk(KERN_INFO "LGE_INFO: igb_avb PCS Full Duplex");
-			}
-
-#if 0
-			/* Forcing 10mb, 100mb, or 1000mb? */
-			if (hw->mac.forced_speed_duplex & (ADVERTISE_1000_FULL|ADVERTISE_1000_HALF)) {
-				ctrl_reg |= E1000_CTRL_SPD_1000 | E1000_CTRL_FRCSPD;
-				reg |= E1000_PCS_LCTL_FSV_1000;
-				//DEBUGOUT("Forcing PCS 1000mb\n");
-				printk(KERN_INFO "LGE_INFO: igb_avb Forcing CS 1000 Mbps");
-			} else {
-				if (hw->mac.forced_speed_duplex & E1000_ALL_100_SPEED) {
-				ctrl_reg |= E1000_CTRL_SPD_100 | E1000_CTRL_FRCSPD;
-				reg |= E1000_PCS_LCTL_FSV_100;
-				//DEBUGOUT("Forcing PCS 100mb\n");
-				printk(KERN_INFO "LGE_INFO: igb_avb Forcing CS 100 Mbps");
-			} else {
-				ctrl_reg |= E1000_CTRL_SPD_10 | E1000_CTRL_FRCSPD;
-				reg |= E1000_PCS_LCTL_FSV_10;
-				//DEBUGOUT("Forcing PCS 10mb\n");
-				printk(KERN_INFO "LGE_INFO: igb_avb Forcing CS 10 Mbps");
-			}
-#else
-				ctrl_reg |= E1000_CTRL_SPD_100 | E1000_CTRL_FRCSPD;
-				reg |= E1000_PCS_LCTL_FSV_100;
-				//DEBUGOUT("Forcing PCS 100mb\n");
-				printk(KERN_INFO "LGE_INFO: igb_avb Forcing CS 100 Mbps");
+	ctrl_reg |= E1000_CTRL_SPD_100 | E1000_CTRL_FRCSPD;
+	reg |= E1000_PCS_LCTL_FSV_100;
+	printk(KERN_INFO "LGE_INFO: igb_avb Forcing CS 100 Mbps");
+#else	
+	/* sgmii mode lets the phy handle forcing speed/duplex */
+	pcs_autoneg = true;
 #endif
-		} else {
-		/* sgmii mode lets the phy handle forcing speed/duplex */
-			pcs_autoneg = true;
-		}
 /* Tag: LGE_V@_IPC- */
 		/* autoneg time out should be disabled for SGMII mode */
 		reg &= ~(E1000_PCS_LCTL_AN_TIMEOUT);
@@ -3117,6 +3067,8 @@ out:
 	return ret_val;
 }
 
+#ifdef LGE
+
 /* Tag: LGE_V@_IPC+ */
 /*
  * Routines to read various Broadcomm PHY "extended" register sets.
@@ -3130,8 +3082,7 @@ s32 e1000_read_phy_reg_bcm_s1c(struct e1000_hw *hw, u32 reg, u16 *data) {
 	struct e1000_phy_info *phy = &hw->phy;
 	s32 ret_val = E1000_SUCCESS;
 
-        //DEBUGFUNC(__FUNCTION__);
-		printk(KERN_INFO "LGE_INFO: igb_avb e1000_read_phy_reg_bcm_s1c");
+        printk(KERN_INFO "LGE_INFO: igb_avb e1000_read_phy_reg_bcm_s1c");
 
 	ret_val = phy->ops.write_reg(hw, 0x1C, (reg & 0x1F)<<10);
 	if (!ret_val)
@@ -3145,8 +3096,7 @@ s32 e1000_write_phy_reg_bcm_s1c(struct e1000_hw *hw, u32 reg, u16 data) {
 	struct e1000_phy_info *phy = &hw->phy;
 	s32 ret_val = E1000_SUCCESS;
 
-        //DEBUGFUNC(__FUNCTION__);
-		printk(KERN_INFO "LGE_INFO: igb_avb e1000_write_phy_reg_bcm_s1c");
+        printk(KERN_INFO "LGE_INFO: igb_avb e1000_write_phy_reg_bcm_s1c");
 
 	ret_val = phy->ops.write_reg(hw, 0x1C, (1<<15) | ((reg & 0x1F)<<10) | (data & 0x3FF));
 
@@ -3157,8 +3107,7 @@ s32 e1000_read_phy_reg_bcm_s18(struct e1000_hw *hw, u32 reg, u16 *data) {
 	struct e1000_phy_info *phy = &hw->phy;
 	s32 ret_val = E1000_SUCCESS;
 
-        //DEBUGFUNC(__FUNCTION__);
-		printk(KERN_INFO "LGE_INFO: igb_avb e1000_read_phy_reg_bcm_s18");
+        printk(KERN_INFO "LGE_INFO: igb_avb e1000_read_phy_reg_bcm_s18");
 
 	ret_val = phy->ops.write_reg(hw, 0x18, ((reg & 0x7)<<12) | 0x7);
 	if (!ret_val)
@@ -3171,8 +3120,7 @@ s32 e1000_write_phy_reg_bcm_s18(struct e1000_hw *hw, u32 reg, u16 data) {
 	struct e1000_phy_info *phy = &hw->phy;
 	s32 ret_val = E1000_SUCCESS;
 
-        //DEBUGFUNC(__FUNCTION__);
-		printk(KERN_INFO "LGE_INFO: igb_avb e1000_write_phy_reg_bcm_s18");
+        printk(KERN_INFO "LGE_INFO: igb_avb e1000_write_phy_reg_bcm_s18");
 
         data = (data & ~0x7) | (reg & 0x7);
         if((reg & 0x7) == 0x7)
@@ -3186,8 +3134,7 @@ s32 e1000_read_phy_reg_bcm_exp(struct e1000_hw *hw, u32 reg, u16 *data) {
 	struct e1000_phy_info *phy = &hw->phy;
 	s32 ret_val = E1000_SUCCESS;
 
-        //DEBUGFUNC(__FUNCTION__);
-		printk(KERN_INFO "LGE_INFO: igb_avb e1000_read_phy_reg_bcm_exp");
+        printk(KERN_INFO "LGE_INFO: igb_avb e1000_read_phy_reg_bcm_exp");
 
 	ret_val = phy->ops.write_reg(hw, 0x17, 0xF00 | reg);
 	if (!ret_val)
@@ -3201,8 +3148,7 @@ s32 e1000_write_phy_reg_bcm_exp(struct e1000_hw *hw, u32 reg, u16 data) {
 	struct e1000_phy_info *phy = &hw->phy;
 	s32 ret_val = E1000_SUCCESS;
 
-        //DEBUGFUNC(__FUNCTION__);
-		printk(KERN_INFO "LGE_INFO: igb_avb e1000_write_phy_reg_bcm_exp");
+        printk(KERN_INFO "LGE_INFO: igb_avb e1000_write_phy_reg_bcm_exp");
 
 	ret_val = phy->ops.write_reg(hw, 0x17, 0xF00 | reg);
 	if (!ret_val)
@@ -3216,8 +3162,7 @@ s32 e1000_read_phy_reg_bcm_top(struct e1000_hw *hw, u32 reg, u16 *data) {
 	struct e1000_phy_info *phy = &hw->phy;
 	s32 ret_val = E1000_SUCCESS;
 
-        //DEBUGFUNC(__FUNCTION__);
-		printk(KERN_INFO "LGE_INFO: igb_avb e1000_read_phy_reg_bcm_top");
+        printk(KERN_INFO "LGE_INFO: igb_avb e1000_read_phy_reg_bcm_top");
 
 	ret_val = phy->ops.write_reg(hw, 0x17, 0xD00 | reg);
 	if (!ret_val)
@@ -3231,8 +3176,7 @@ s32 e1000_write_phy_reg_bcm_top(struct e1000_hw *hw, u32 reg, u16 data) {
 	struct e1000_phy_info *phy = &hw->phy;
 	s32 ret_val = E1000_SUCCESS;
 
-        //DEBUGFUNC(__FUNCTION__);
-		printk(KERN_INFO "LGE_INFO: igb_avb e1000_write_phy_reg_bcm_top");
+        printk(KERN_INFO "LGE_INFO: igb_avb e1000_write_phy_reg_bcm_top");
 
 	ret_val = phy->ops.write_reg(hw, 0x17, 0xD00 | reg);
 	if (!ret_val)
@@ -3246,8 +3190,7 @@ s32 e1000_read_phy_reg_bcm_rdb(struct e1000_hw *hw, u32 reg, u16 *data) {
 	struct e1000_phy_info *phy = &hw->phy;
 	s32 ret_val = E1000_SUCCESS;
 
-    //DEBUGFUNC(__FUNCTION__);
-	printk(KERN_INFO "LGE_INFO: igb_avb e1000_read_phy_reg_bcm_rdb");
+    	printk(KERN_INFO "LGE_INFO: igb_avb e1000_read_phy_reg_bcm_rdb");
 
 	ret_val = phy->ops.write_reg(hw, 0x1E, reg);
 	if (!ret_val)
@@ -3260,8 +3203,7 @@ s32 e1000_write_phy_reg_bcm_rdb(struct e1000_hw *hw, u32 reg, u16 data) {
 	struct e1000_phy_info *phy = &hw->phy;
 	s32 ret_val = E1000_SUCCESS;
 
-    //DEBUGFUNC(__FUNCTION__);
-	printk(KERN_INFO "LGE_INFO: igb_avb e1000_write_phy_reg_bcm_rdb");
+    	printk(KERN_INFO "LGE_INFO: igb_avb e1000_write_phy_reg_bcm_rdb");
 
 	ret_val = phy->ops.write_reg(hw, 0x1E, reg);
 	if (!ret_val)
@@ -3271,23 +3213,21 @@ s32 e1000_write_phy_reg_bcm_rdb(struct e1000_hw *hw, u32 reg, u16 data) {
 }
 
 /**
- *  e1000_initialize_BCM89811_phy - Initialize BCM89811 PHY
+ *  e1000_initialize_BCM89611_phy - Initialize BCM89611 PHY
  *  @hw: pointer to the HW structure
  *
  **/
-s32 e1000_initialize_BCM89811_phy(struct e1000_hw *hw)
+s32 e1000_initialize_BCM89611_phy(struct e1000_hw *hw)
 {
 	struct e1000_phy_info *phy = &hw->phy;
-	//i82544_dev_t  *i82544 = hw->i82544;
 	s32 ret_val = E1000_SUCCESS;
 	
-	//DEBUGFUNC("e1000_initialize_BCM89811_phy");
-	printk(KERN_INFO "LGE_INFO: igb_avb e1000_initialize_BCM89811_phy");
+	printk(KERN_INFO "LGE_INFO: igb_avb e1000_initialize_BCM89611_phy");
 	
 	phy->addr = 1; // BCM89811 - PHY. vs phy->addr = 0; // BCM89611 - TXCV
 	
 	/* Check if this is correct PHY. */
-	if (phy->id != BCM89811_E_PHY_ID)
+	if (phy->id != BCM89611_E_PHY_ID)
 		goto out;
 	
 /* begin EMI optimization */
@@ -3316,12 +3256,12 @@ s32 e1000_initialize_BCM89811_phy(struct e1000_hw *hw)
 	e1000_write_phy_reg_bcm_rdb(hw, 0x0028, 0x0400);
 /* End EMI optimization */
 
-#if 0
-	/*begin LED setup portion*/
+/*
+	//begin LED setup portion
 	e1000_write_phy_reg_bcm_rdb(hw, 0x001D, 0x3411);
 	e1000_write_phy_reg_bcm_rdb(hw, 0x0820, 0x0401);
-	/*end of LED setup*/
-#endif
+	//end of LED setup
+*/
 
 	/* Set to RGMII mode */
 	ret_val = e1000_write_phy_reg_bcm_rdb(hw, 0x0045, 0x0000);
@@ -3331,43 +3271,20 @@ s32 e1000_initialize_BCM89811_phy(struct e1000_hw *hw)
 	if (ret_val)
 		goto out;
 
-#if 0
-	/* Disable LDS, set 100Mb/s, one pair */
-	if (i82544->brmast == (uint16_t)~0) {
-		/* Set phy to auto mode */
-		slogf (_SLOGC_NETWORK, _SLOG_WARNING, "devnp-e1000: Setting BroadrReach PHY to auto");
-		ret_val = phy->ops.write_reg(hw, 0x00, 0x1200);
-		if (ret_val)
-			goto out;
-	} else if (i82544->brmast == 1) {
-		/* Set phy to master mode */
-		slogf (_SLOGC_NETWORK, _SLOG_WARNING, "devnp-e1000: Forcing BroadrReach PHY to master");
-		ret_val = phy->ops.write_reg(hw, 0x00, 0x0208);
-		if (ret_val)
-			goto out;
-	} else {
-		/* Set phy to slave mode */
-		slogf (_SLOGC_NETWORK, _SLOG_WARNING, "devnp-e1000: Forcing BroadrReach PHY to slave");
-		ret_val = phy->ops.write_reg(hw, 0x00, 0x0200);
-		if (ret_val)
-			goto out;
-	}
-#else
 	/* Set phy to master mode */
-	//slogf (_SLOGC_NETWORK, _SLOG_WARNING, "devnp-e1000: Forcing BroadrReach PHY to master");
 	printk(KERN_INFO "LGE_INFO: igb_avb Forcing BroadrReach PHY to master");
 	ret_val = phy->ops.write_reg(hw, 0x00, 0x0208);
 	
 	if (ret_val)
 		goto out;
-#endif
 
 out:
 	return ret_val;
 }
 /* Tag: LGE_V@_IPC- */
+#endif /*ifdef LGE*/
 
-/**
+/*
  *  e1000_set_eee_i350 - Enable/disable EEE support
  *  @hw: pointer to the HW structure
  *  @adv1g: boolean flag enabling 1G EEE advertisement

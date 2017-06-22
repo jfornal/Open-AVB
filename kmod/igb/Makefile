@@ -56,6 +56,14 @@ endif
 
 DRIVER_NAME=igb_avb
 
+####LGE specific code#############
+ifeq ($(LGE), 1)
+$(info LGE specific code activated)
+CFLAGS_EXTRA += -DLGE
+endif
+##################################
+
+
 ####External MDIO operating mode#####
 ifeq ($(EXT_MDIO), 1)
 $(info External MDIO operating mode enabled)

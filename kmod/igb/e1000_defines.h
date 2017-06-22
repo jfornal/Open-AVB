@@ -1244,10 +1244,10 @@
 #define I210_I_PHY_ID		0x01410C00
 #define IGP04E1000_E_PHY_ID	0x02A80391
 #define M88_VENDOR		0x0141
-/* Tag: LGE_V@_IPC+ */
+#ifdef LGE
 #define BCM89811_E_PHY_ID    0xAE025020
 #define BCM89611_E_PHY_ID    0x03625CD0
-/* Tag: LGE_V@_IPC- */
+#endif
 
 /* M88E1000 Specific Registers */
 #define M88E1000_PHY_SPEC_CTRL		0x10  /* PHY Specific Control Reg */

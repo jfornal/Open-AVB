@@ -208,11 +208,12 @@ s32 e1000_get_phy_id(struct e1000_hw *hw)
 	if (!phy->ops.read_reg)
 		return E1000_SUCCESS;
 
-/* Tag: LGE_V@_IPC+ */
+#ifdef LGE
 	while (retry_count < 2) {
-		ret_val = phy->ops.read_reg(hw, PHY_ID1, &phy_id);
-		if (ret_val)
-			  return ret_val;
+#endif
+	ret_val = phy->ops.read_reg(hw, PHY_ID1, &phy_id);
+	if (ret_val)
+		  return ret_val;
   
 	  phy->id = (u32)(phy_id << 16);
 	  usec_delay(20);
@@ -222,16 +223,17 @@ s32 e1000_get_phy_id(struct e1000_hw *hw)
   
 	  phy->id |= (u32)(phy_id & PHY_REVISION_MASK);
 	  phy->revision = (u32)(phy_id & ~PHY_REVISION_MASK);
-
-		if (phy->id != 0 && phy->id != PHY_REVISION_MASK) {
-			//DEBUGOUT3("devnp-e1000: PHY%d ID 0x%04x Rev 0x%x", phy->addr, phy->id, phy->revision);
-			printk(KERN_INFO "LGE_INFO: igb_avb PHY%d ID 0x%04x Rev 0x%x", phy->addr, phy->id, phy->revision);
-			return 0;
-		}
-
-		retry_count++;
+#ifdef LGE
+	if (phy->id != 0 && phy->id != PHY_REVISION_MASK) 
+	{
+		printk(KERN_INFO "LGE_INFO: igb_avb PHY%d ID 0x%04x Rev 0x%x", phy->addr, phy->id, phy->revision);
+		return 0;
 	}
-/* Tag: LGE_V@_IPC- */
+
+	retry_count++;
+	}
+#endif	
+
 	return 0;
 }
 
@@ -269,7 +271,6 @@ s32 e1000_phy_reset_dsp_generic(struct e1000_hw *hw)
 s32 e1000_read_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 *data)
 {
 	struct e1000_phy_info *phy = &hw->phy;
-	//u32 i, mdic = 0;
 	u32 i, mdic = 0, mdicnfg = 0;
 
 	DEBUGFUNC("e1000_read_phy_reg_mdic");
@@ -289,7 +290,6 @@ s32 e1000_read_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 *data)
 		(phy->addr << E1000_MDIC_PHY_SHIFT) |
 		(E1000_MDIC_OP_READ));
 
-/* Tag: LGE_V@_IPC+ */
 	switch (hw->mac.type) {
 		case e1000_82580:
 		case e1000_i350:
@@ -305,7 +305,7 @@ s32 e1000_read_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 *data)
 			mdic |= (phy->addr << E1000_MDIC_PHY_SHIFT);
 			break;
 	}
-/* Tag: LGE_V@_IPC- */
+
 		
 	E1000_WRITE_REG(hw, E1000_MDIC, mdic);
 
@@ -351,7 +351,6 @@ s32 e1000_read_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 *data)
 s32 e1000_write_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 data)
 {
 	struct e1000_phy_info *phy = &hw->phy;
-	//u32 i, mdic = 0;
 	u32 i, mdic = 0, mdicnfg = 0;
 
 	DEBUGFUNC("e1000_write_phy_reg_mdic");
@@ -370,7 +369,6 @@ s32 e1000_write_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 data)
 		(E1000_MDIC_OP_WRITE));
 	printk(KERN_INFO "igb_avb e1000_write_phy_reg_mdic dmic reg 0x%x", mdic);
 
-/* Tag: LGE_V@_IPC+ */
 	switch (hw->mac.type) {
 		case e1000_82580:
 		case e1000_i350:
@@ -386,7 +384,6 @@ s32 e1000_write_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 data)
 			mdic |= (phy->addr << E1000_MDIC_PHY_SHIFT);
 			break;
 	}
-/* Tag: LGE_V@_IPC- */
 
 	E1000_WRITE_REG(hw, E1000_MDIC, mdic);
 
@@ -1120,20 +1117,19 @@ s32 e1000_copper_link_setup_82577(struct e1000_hw *hw)
 
 /* Tag: LGE_V@_IPC+ */
 /**
- *  e1000_copper_link_setup_bcm89811 - Setup bcm89811 PHY for copper link
+ *  e1000_copper_link_setup_bcm89611 - Setup bcm89611 PHY for copper link
  *  @hw: pointer to the HW structure
  *
  **/
-s32 e1000_copper_link_setup_bcm89811(struct e1000_hw *hw)
+s32 e1000_copper_link_setup_bcm89611(struct e1000_hw *hw)
 {
 	struct e1000_phy_info *phy = &hw->phy;
 	u16 reg;
 
-	DEBUGFUNC("e1000_copper_link_setup_bcm89811");
+	printk(KERN_INFO "e1000_copper_link_setup_bcm89611");
 
 	/* Setup BCM89611 SGMII <-> RGMII bridge PHY */
 
-	//slogf (_SLOGC_NETWORK, _SLOG_WARNING, "devnp-e1000: reconfiguring BCM89611 PHY0 as 100Mb SGMII/RGMII Bridge");
 	printk(KERN_INFO "LGE_INFO: igb_avb reconfiguring BCM89611 PHY0 as 100Mb SGMII/RGMII Bridge");
 
 	phy->addr = 0;
@@ -1155,7 +1151,6 @@ s32 e1000_copper_link_setup_bcm89811(struct e1000_hw *hw)
 	phy->addr = 1;
 	phy->ops.read_reg(hw, 0x00, &reg); /* make sure mdicnfg gets reset with phy->addr */
 
-	//return e1000_set_master_slave_mode(hw);
 	return E1000_SUCCESS;
 }
 /* Tag: LGE_V@_IPC- */
