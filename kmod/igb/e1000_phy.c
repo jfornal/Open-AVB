@@ -202,8 +202,9 @@ s32 e1000_get_phy_id(struct e1000_hw *hw)
 	struct e1000_phy_info *phy = &hw->phy;
 	s32 ret_val = E1000_SUCCESS;
 	u16 phy_id;
+#ifdef LGE
 	u16 retry_count = 0;
-
+#endif
 	DEBUGFUNC("e1000_get_phy_id");
 	if (!phy->ops.read_reg)
 		return E1000_SUCCESS;
@@ -1115,6 +1116,7 @@ s32 e1000_copper_link_setup_82577(struct e1000_hw *hw)
 	return e1000_set_master_slave_mode(hw);
 }
 
+#ifdef LGE
 /* Tag: LGE_V@_IPC+ */
 /**
  *  e1000_copper_link_setup_bcm89611 - Setup bcm89611 PHY for copper link
@@ -1161,7 +1163,7 @@ s32 e1000_copper_link_setup_bcm89611(struct e1000_hw *hw)
 	return E1000_SUCCESS;
 }
 /* Tag: LGE_V@_IPC- */
-
+#endif
 /**
  *  e1000_copper_link_setup_m88 - Setup m88 PHY's for copper link
  *  @hw: pointer to the HW structure

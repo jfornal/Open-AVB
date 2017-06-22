@@ -341,6 +341,7 @@ static s32 e1000_init_phy_params_82575(struct e1000_hw *hw)
 			phy->ops.force_speed_duplex = e1000_phy_force_speed_duplex_m88;
 			break;
 /* Tag: LGE_V@_IPC+ */
+#ifdef LGE
 		case BCM89611_E_PHY_ID:
 		default:
 			printk(KERN_INFO "LGE_INFO: igb_avb initialize BRCM PHY");
@@ -352,6 +353,7 @@ static s32 e1000_init_phy_params_82575(struct e1000_hw *hw)
 				goto out;
 			break;
 /* Tag: LGE_V@_IPC- */	
+#endif
 	}
 
 out:
@@ -704,7 +706,9 @@ static s32 e1000_get_phy_id_82575(struct e1000_hw *hw)
 	s32  ret_val = E1000_SUCCESS;
 	u32 ctrl_ext;
 	u32 mdic;
-
+#ifndef LGE
+	u16 phy_id;
+#endif
 	DEBUGFUNC("e1000_get_phy_id_82575");
 
 	/* some i354 devices need an extra read for phy id */
@@ -745,7 +749,7 @@ static s32 e1000_get_phy_id_82575(struct e1000_hw *hw)
 #else
 			mdic = E1000_READ_REG(hw, E1000_MDICNFG);
 			mdic &= E1000_MDICNFG_PHY_MASK;
-			phy->addr = mdicnfg >> E1000_MDICNFG_PHY_SHIFT;		
+			phy->addr = mdic >> E1000_MDICNFG_PHY_SHIFT;		
 #endif
 			printk(KERN_INFO "igb_avb e1000_get_phy_id_82575, phy->addr read from mdic %d ", phy->addr);
 
@@ -833,24 +837,28 @@ static s32 e1000_phy_hw_reset_sgmii_82575(struct e1000_hw *hw)
 	 * SFP documentation requires the following to configure the SPF module
 	 * to work on SGMII.  No further documentation is given.
 	 */
-
+#ifdef LGE
 	if (phy->id != BCM89611_E_PHY_ID) {
         printk(KERN_INFO "LGE_INFO: igb_avb - not BCM89611");
-		ret_val = hw->phy.ops.write_reg(hw, 0x1B, 0x8084);
+#endif
+	ret_val = hw->phy.ops.write_reg(hw, 0x1B, 0x8084);
 	if (ret_val)
 		goto out;
+#ifdef LGE
 	}
-
+#endif
 	ret_val = hw->phy.ops.commit(hw);
 	if (ret_val)
 		goto out;
 
 	if (phy->id == M88E1512_E_PHY_ID)
 		ret_val = e1000_initialize_M88E1512_phy(hw);
+#ifdef LGE
 	else if (phy->id == BCM89611_E_PHY_ID) {
 		printk(KERN_INFO "LGE_INFO: igb_avb BCM89611");
 		ret_val = e1000_initialize_BCM89611_phy(hw);
 	}
+#endif
 out:
 	return ret_val;
 }
@@ -1669,10 +1677,12 @@ static s32 e1000_setup_copper_link_82575(struct e1000_hw *hw)
 	case e1000_phy_82580:
 		ret_val = e1000_copper_link_setup_82577(hw);
 		break;
+#ifdef LGE
 	case e1000_phy_bcm89611:
                 printk(KERN_INFO "LGE_INFO: igb_avb copper link setup BRCM89611");
-		ret_val = e1000_copper_link_setup_bcm89811(hw);
+		ret_val = e1000_copper_link_setup_bcm89611(hw);
 		break;
+#endif
 	default:
 		ret_val = -E1000_ERR_PHY;
 		break;
