@@ -96,6 +96,7 @@ static const struct pci_device_id igb_pci_tbl[] = {
 	{ PCI_VDEVICE(INTEL, E1000_DEV_ID_I210_FIBER) },
 	{ PCI_VDEVICE(INTEL, E1000_DEV_ID_I210_SERDES) },
 	{ PCI_VDEVICE(INTEL, E1000_DEV_ID_I210_SGMII) },
+	{ PCI_VDEVICE(INTEL, E1000_DEV_ID_I210_EXT_SGMII) },
 	{ PCI_VDEVICE(INTEL, E1000_DEV_ID_I210_COPPER_FLASHLESS) },
 	{ PCI_VDEVICE(INTEL, E1000_DEV_ID_I210_SERDES_FLASHLESS) },
 	/* required last entry */
@@ -2614,7 +2615,7 @@ static int igb_probe(struct pci_dev *pdev,
 	s32 ret_val;
 	static int global_quad_port_a; /* global quad port a indication */
 	int err, pci_using_dac;
-	static int cards_found;
+	static int cards_found;	
 
 	err = pci_enable_device_mem(pdev);
 	if (err)

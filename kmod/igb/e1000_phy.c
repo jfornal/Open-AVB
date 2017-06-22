@@ -55,7 +55,6 @@ void e1000_init_phy_ops_generic(struct e1000_hw *hw)
 {
 	struct e1000_phy_info *phy = &hw->phy;
 	DEBUGFUNC("e1000_init_phy_ops_generic");
-
 	/* Initialize function pointers */
 	phy->ops.init_params = e1000_null_ops_generic;
 	phy->ops.acquire = e1000_null_ops_generic;
@@ -203,26 +202,37 @@ s32 e1000_get_phy_id(struct e1000_hw *hw)
 	struct e1000_phy_info *phy = &hw->phy;
 	s32 ret_val = E1000_SUCCESS;
 	u16 phy_id;
+	u16 retry_count = 0;
 
 	DEBUGFUNC("e1000_get_phy_id");
-
 	if (!phy->ops.read_reg)
 		return E1000_SUCCESS;
 
-	ret_val = phy->ops.read_reg(hw, PHY_ID1, &phy_id);
-	if (ret_val)
-		return ret_val;
+/* Tag: LGE_V@_IPC+ */
+	while (retry_count < 2) {
+		ret_val = phy->ops.read_reg(hw, PHY_ID1, &phy_id);
+		if (ret_val)
+			  return ret_val;
+  
+	  phy->id = (u32)(phy_id << 16);
+	  usec_delay(20);
+	  ret_val = phy->ops.read_reg(hw, PHY_ID2, &phy_id);
+	  if (ret_val)
+		  return ret_val;
+  
+	  phy->id |= (u32)(phy_id & PHY_REVISION_MASK);
+	  phy->revision = (u32)(phy_id & ~PHY_REVISION_MASK);
 
-	phy->id = (u32)(phy_id << 16);
-	usec_delay(20);
-	ret_val = phy->ops.read_reg(hw, PHY_ID2, &phy_id);
-	if (ret_val)
-		return ret_val;
+		if (phy->id != 0 && phy->id != PHY_REVISION_MASK) {
+			//DEBUGOUT3("devnp-e1000: PHY%d ID 0x%04x Rev 0x%x", phy->addr, phy->id, phy->revision);
+			printk(KERN_INFO "LGE_INFO: igb_avb PHY%d ID 0x%04x Rev 0x%x", phy->addr, phy->id, phy->revision);
+			return 0;
+		}
 
-	phy->id |= (u32)(phy_id & PHY_REVISION_MASK);
-	phy->revision = (u32)(phy_id & ~PHY_REVISION_MASK);
-
-	return E1000_SUCCESS;
+		retry_count++;
+	}
+/* Tag: LGE_V@_IPC- */
+	return 0;
 }
 
 /**
@@ -259,10 +269,11 @@ s32 e1000_phy_reset_dsp_generic(struct e1000_hw *hw)
 s32 e1000_read_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 *data)
 {
 	struct e1000_phy_info *phy = &hw->phy;
-	u32 i, mdic = 0;
+	//u32 i, mdic = 0;
+	u32 i, mdic = 0, mdicnfg = 0;
 
 	DEBUGFUNC("e1000_read_phy_reg_mdic");
-
+	
 	if (offset > MAX_PHY_REG_ADDRESS) {
 		DEBUGOUT1("PHY Address %d is out of range\n", offset);
 		return -E1000_ERR_PARAM;
@@ -272,10 +283,30 @@ s32 e1000_read_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 *data)
 	 * Control register.  The MAC will take care of interfacing with the
 	 * PHY to retrieve the desired data.
 	 */
+	
+	
 	mdic = ((offset << E1000_MDIC_REG_SHIFT) |
 		(phy->addr << E1000_MDIC_PHY_SHIFT) |
 		(E1000_MDIC_OP_READ));
 
+/* Tag: LGE_V@_IPC+ */
+	switch (hw->mac.type) {
+		case e1000_82580:
+		case e1000_i350:
+		case e1000_i354:
+		case e1000_i210:
+		case e1000_i211:
+			mdicnfg = E1000_READ_REG(hw, E1000_MDICNFG);
+			mdicnfg &= ~E1000_MDICNFG_PHY_MASK;
+			mdicnfg |= (phy->addr << E1000_MDICNFG_PHY_SHIFT);
+			E1000_WRITE_REG(hw, E1000_MDICNFG, mdicnfg);
+			break;
+		default:
+			mdic |= (phy->addr << E1000_MDIC_PHY_SHIFT);
+			break;
+	}
+/* Tag: LGE_V@_IPC- */
+		
 	E1000_WRITE_REG(hw, E1000_MDIC, mdic);
 
 	/* Poll the ready bit to see if the MDI read completed
@@ -303,7 +334,9 @@ s32 e1000_read_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 *data)
 		return -E1000_ERR_PHY;
 	}
 	*data = (u16) mdic;
-
+	printk(KERN_INFO "igb_avb phy->addr: %d", phy->addr);
+	printk(KERN_INFO "igb_avb mdic %x",mdic);
+	
 	return E1000_SUCCESS;
 }
 
@@ -318,10 +351,10 @@ s32 e1000_read_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 *data)
 s32 e1000_write_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 data)
 {
 	struct e1000_phy_info *phy = &hw->phy;
-	u32 i, mdic = 0;
+	//u32 i, mdic = 0;
+	u32 i, mdic = 0, mdicnfg = 0;
 
 	DEBUGFUNC("e1000_write_phy_reg_mdic");
-
 	if (offset > MAX_PHY_REG_ADDRESS) {
 		DEBUGOUT1("PHY Address %d is out of range\n", offset);
 		return -E1000_ERR_PARAM;
@@ -335,6 +368,25 @@ s32 e1000_write_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 data)
 		(offset << E1000_MDIC_REG_SHIFT) |
 		(phy->addr << E1000_MDIC_PHY_SHIFT) |
 		(E1000_MDIC_OP_WRITE));
+	printk(KERN_INFO "igb_avb e1000_write_phy_reg_mdic dmic reg 0x%x", mdic);
+
+/* Tag: LGE_V@_IPC+ */
+	switch (hw->mac.type) {
+		case e1000_82580:
+		case e1000_i350:
+		case e1000_i354:
+		case e1000_i210:
+		case e1000_i211:
+			mdicnfg = E1000_READ_REG(hw, E1000_MDICNFG);
+			mdicnfg &= ~E1000_MDICNFG_PHY_MASK;
+			mdicnfg |= (phy->addr << E1000_MDICNFG_PHY_SHIFT);
+			E1000_WRITE_REG(hw, E1000_MDICNFG, mdicnfg);
+			break;
+		default:
+			mdic |= (phy->addr << E1000_MDIC_PHY_SHIFT);
+			break;
+	}
+/* Tag: LGE_V@_IPC- */
 
 	E1000_WRITE_REG(hw, E1000_MDIC, mdic);
 
@@ -490,7 +542,6 @@ s32 e1000_read_sfp_data_byte(struct e1000_hw *hw, u16 offset, u8 *data)
 	u32 data_local = 0;
 
 	DEBUGFUNC("e1000_read_sfp_data_byte");
-
 	if (offset > E1000_I2CCMD_SFP_DIAG_ADDR(255)) {
 		DEBUGOUT("I2CCMD command address exceeds upper limit\n");
 		return -E1000_ERR_PHY;
@@ -504,7 +555,6 @@ s32 e1000_read_sfp_data_byte(struct e1000_hw *hw, u16 offset, u8 *data)
 		  E1000_I2CCMD_OPCODE_READ);
 
 	E1000_WRITE_REG(hw, E1000_I2CCMD, i2ccmd);
-
 	/* Poll the ready bit to see if the I2C read completed */
 	for (i = 0; i < E1000_I2CCMD_PHY_TIMEOUT; i++) {
 		usec_delay(50);
@@ -513,7 +563,7 @@ s32 e1000_read_sfp_data_byte(struct e1000_hw *hw, u16 offset, u8 *data)
 			break;
 	}
 	if (!(data_local & E1000_I2CCMD_READY)) {
-		DEBUGOUT("I2CCMD Read did not complete\n");
+		DEBUGOUT("I2CCMD Read did not complete\n");	
 		return -E1000_ERR_PHY;
 	}
 	if (data_local & E1000_I2CCMD_ERROR) {
@@ -1067,6 +1117,48 @@ s32 e1000_copper_link_setup_82577(struct e1000_hw *hw)
 
 	return e1000_set_master_slave_mode(hw);
 }
+
+/* Tag: LGE_V@_IPC+ */
+/**
+ *  e1000_copper_link_setup_bcm89811 - Setup bcm89811 PHY for copper link
+ *  @hw: pointer to the HW structure
+ *
+ **/
+s32 e1000_copper_link_setup_bcm89811(struct e1000_hw *hw)
+{
+	struct e1000_phy_info *phy = &hw->phy;
+	u16 reg;
+
+	DEBUGFUNC("e1000_copper_link_setup_bcm89811");
+
+	/* Setup BCM89611 SGMII <-> RGMII bridge PHY */
+
+	//slogf (_SLOGC_NETWORK, _SLOG_WARNING, "devnp-e1000: reconfiguring BCM89611 PHY0 as 100Mb SGMII/RGMII Bridge");
+	printk(KERN_INFO "LGE_INFO: igb_avb reconfiguring BCM89611 PHY0 as 100Mb SGMII/RGMII Bridge");
+
+	phy->addr = 0;
+
+	/* setup SGMII/RGMII mode for PHY0 bridge (from BCM89611 Data Sheet, Section 1, Serial GMII Interface) */
+	e1000_write_phy_reg_bcm_top(hw, 0x34, 0x0000); /* Top-Level Expansion: Spare Register 0 */
+
+	/* Enable Fiber Registers 00h-0Fh */
+	e1000_write_phy_reg_bcm_s1c(hw, 0x1F, 0x004B); /* Mode Control Shadow Register */
+	e1000_write_phy_reg_bcm_s1c(hw, 0x16, 0x002C);
+
+	/* Enable SGMII Slave */
+	e1000_write_phy_reg_bcm_s1c(hw, 0x15, 0x0182); /* SGMII Slave Shadow Register */
+	phy->ops.read_reg(hw, 0x1C, &reg);
+
+	/* deisolate PHY bridge and set to 100Mb/Full forced */
+	phy->ops.write_reg(hw, 0x00, 0x2100);
+
+	phy->addr = 1;
+	phy->ops.read_reg(hw, 0x00, &reg); /* make sure mdicnfg gets reset with phy->addr */
+
+	//return e1000_set_master_slave_mode(hw);
+	return E1000_SUCCESS;
+}
+/* Tag: LGE_V@_IPC- */
 
 /**
  *  e1000_copper_link_setup_m88 - Setup m88 PHY's for copper link
@@ -3192,7 +3284,6 @@ s32 e1000_write_phy_reg_gs40g(struct e1000_hw *hw, u32 offset, u16 data)
 	u16 page = offset >> GS40G_PAGE_SHIFT;
 
 	DEBUGFUNC("e1000_write_phy_reg_gs40g");
-
 	offset = offset & GS40G_OFFSET_MASK;
 	ret_val = hw->phy.ops.acquire(hw);
 	if (ret_val)

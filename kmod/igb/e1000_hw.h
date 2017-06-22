@@ -59,6 +59,7 @@ struct e1000_hw;
 #define E1000_DEV_ID_I210_FIBER			0x1536
 #define E1000_DEV_ID_I210_SERDES		0x1537
 #define E1000_DEV_ID_I210_SGMII			0x1538
+#define E1000_DEV_ID_I210_EXT_SGMII		0x15F6
 #define E1000_DEV_ID_I210_COPPER_FLASHLESS	0x157B
 #define E1000_DEV_ID_I210_SERDES_FLASHLESS	0x157C
 #define E1000_DEV_ID_I211_COPPER		0x1539
@@ -133,6 +134,7 @@ enum e1000_phy_type {
 	e1000_phy_82580,
 	e1000_phy_vf,
 	e1000_phy_i210,
+	e1000_phy_bcm89811, /* Tag: LGE_V@_IPC+ */
 };
 
 enum e1000_bus_type {

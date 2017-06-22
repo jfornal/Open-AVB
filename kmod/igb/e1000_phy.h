@@ -43,6 +43,7 @@ s32  e1000_check_reset_block_generic(struct e1000_hw *hw);
 s32  e1000_copper_link_setup_igp(struct e1000_hw *hw);
 s32  e1000_copper_link_setup_m88(struct e1000_hw *hw);
 s32  e1000_copper_link_setup_m88_gen2(struct e1000_hw *hw);
+s32  e1000_copper_link_setup_bcm89811(struct e1000_hw *hw);
 s32  e1000_phy_force_speed_duplex_igp(struct e1000_hw *hw);
 s32  e1000_phy_force_speed_duplex_m88(struct e1000_hw *hw);
 s32  e1000_phy_force_speed_duplex_ife(struct e1000_hw *hw);

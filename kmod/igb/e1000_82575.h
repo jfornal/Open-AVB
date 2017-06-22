@@ -507,4 +507,17 @@ s32 e1000_read_i2c_byte_generic(struct e1000_hw *hw, u8 byte_offset,
 s32 e1000_write_i2c_byte_generic(struct e1000_hw *hw, u8 byte_offset,
 				 u8 dev_addr, u8 data);
 void e1000_i2c_bus_clear(struct e1000_hw *hw);
+/* Tag: LGE_V@_IPC+ */
+s32 e1000_initialize_BCM89811_phy(struct e1000_hw *hw);
+s32 e1000_read_phy_reg_bcm_s1c(struct e1000_hw *hw, u32 reg, u16 *data);
+s32 e1000_write_phy_reg_bcm_s1c(struct e1000_hw *hw, u32 reg, u16 data);
+s32 e1000_read_phy_reg_bcm_s18(struct e1000_hw *hw, u32 reg, u16 *data);
+s32 e1000_write_phy_reg_bcm_s18(struct e1000_hw *hw, u32 reg, u16 data);
+s32 e1000_read_phy_reg_bcm_exp(struct e1000_hw *hw, u32 reg, u16 *data);
+s32 e1000_write_phy_reg_bcm_exp(struct e1000_hw *hw, u32 reg, u16 data);
+s32 e1000_read_phy_reg_bcm_top(struct e1000_hw *hw, u32 reg, u16 *data);
+s32 e1000_write_phy_reg_bcm_top(struct e1000_hw *hw, u32 reg, u16 data);
+s32 e1000_read_phy_reg_bcm_rdb(struct e1000_hw *hw, u32 reg, u16 *data);
+s32 e1000_write_phy_reg_bcm_rdb(struct e1000_hw *hw, u32 reg, u16 data);
+/* Tag: LGE_V@_IPC- */
 #endif /* _E1000_82575_H_ */

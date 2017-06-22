@@ -41,6 +41,9 @@ endif
 # PTP is required for AVB support
 CFLAGS_EXTRA += -DIGB_PTP
 
+#DDEBUG
+CFLAGS_EXTRA += -DDEBUG
+
 # Add 32 bit ioctl support
 ifeq ($(32BIT_IOCTL_SUPPORT),y)
 CFLAGS_EXTRA += -DSUPPORT_32BIT_IOCTL
@@ -53,9 +56,16 @@ endif
 
 DRIVER_NAME=igb_avb
 
+####External MDIO operating mode#####
+ifeq ($(EXT_MDIO), 1)
+$(info External MDIO operating mode enabled)
+CFLAGS_EXTRA += -DEXT_MDIO
+endif
+#####################################
+
 ####I2C enablement####
 ifeq ($(I2C_ENABLED), 1)
-$(info CFLAGS_EXTRA += -DI2C_ENABLED)
+$(info I2C interface support enabled)
 CFLAGS_EXTRA += -DI2C_ENABLED
 endif
 
