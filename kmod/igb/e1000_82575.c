@@ -342,10 +342,10 @@ static s32 e1000_init_phy_params_82575(struct e1000_hw *hw)
 			break;
 /* Tag: LGE_V@_IPC+ */
 #ifdef LGE
-		case BCM89611_E_PHY_ID:
+		case BCM89811_E_PHY_ID:
 		default:
 			printk(KERN_INFO "LGE_INFO: igb_avb initialize BRCM PHY");
-			phy->type = e1000_phy_bcm89611;
+			phy->type = e1000_phy_bcm89811;
 			phy->autoneg_mask = 0;
 			printk(KERN_INFO "LGE_INFO: igb_avb - SGMII BRCM PHY ID = 0x%x, phy->autoneg_mask = %d", phy->id, phy->autoneg_mask);
 			ret_val = e1000_initialize_BCM89611_phy(hw);
@@ -838,8 +838,10 @@ static s32 e1000_phy_hw_reset_sgmii_82575(struct e1000_hw *hw)
 	 * to work on SGMII.  No further documentation is given.
 	 */
 #ifdef LGE
-	if (phy->id != BCM89611_E_PHY_ID) {
-        printk(KERN_INFO "LGE_INFO: igb_avb - not BCM89611");
+	printk(KERN_INFO "reset_sgmii:: phy->addr %d\n", phy->addr);
+	printk(KERN_INFO "reset sgmii:: phy->id %x\n", phy->id);
+	if (phy->id != BCM89811_E_PHY_ID) {
+        printk(KERN_INFO "LGE_INFO: igb_avb - not BCM89811\n");
 #endif
 	ret_val = hw->phy.ops.write_reg(hw, 0x1B, 0x8084);
 	if (ret_val)
@@ -854,8 +856,8 @@ static s32 e1000_phy_hw_reset_sgmii_82575(struct e1000_hw *hw)
 	if (phy->id == M88E1512_E_PHY_ID)
 		ret_val = e1000_initialize_M88E1512_phy(hw);
 #ifdef LGE
-	else if (phy->id == BCM89611_E_PHY_ID) {
-		printk(KERN_INFO "LGE_INFO: igb_avb BCM89611");
+	else if (phy->id == BCM89811_E_PHY_ID) {
+		printk(KERN_INFO "LGE_INFO: igb_avb BCM89811");
 		ret_val = e1000_initialize_BCM89611_phy(hw);
 	}
 #endif
@@ -1678,8 +1680,8 @@ static s32 e1000_setup_copper_link_82575(struct e1000_hw *hw)
 		ret_val = e1000_copper_link_setup_82577(hw);
 		break;
 #ifdef LGE
-	case e1000_phy_bcm89611:
-                printk(KERN_INFO "LGE_INFO: igb_avb copper link setup BRCM89611");
+	case e1000_phy_bcm89811:
+                printk(KERN_INFO "LGE_INFO: igb_avb copper link setup BRCM89811");
 		ret_val = e1000_copper_link_setup_bcm89611(hw);
 		break;
 #endif
@@ -3234,13 +3236,15 @@ s32 e1000_initialize_BCM89611_phy(struct e1000_hw *hw)
 	
 	printk(KERN_INFO "LGE_INFO: igb_avb e1000_initialize_BCM89611_phy");
 	
-	phy->addr = 1; // BCM89811 - PHY. vs phy->addr = 0; // BCM89611 - TXCV
+	phy->addr = 0; // BCM89811 - PHY. vs phy->addr = 0; // BCM89611 - TXCV
 	
 	/* Check if this is correct PHY. */
-	if (phy->id != BCM89611_E_PHY_ID)
+	if (phy->id != BCM89811_E_PHY_ID)
 		goto out;
 	
 /* begin EMI optimization */
+
+/*
 	ret_val = e1000_write_phy_reg_bcm_rdb(hw, 0x0028, 0x0C00);
 	ret_val = e1000_write_phy_reg_bcm_rdb(hw, 0x0312, 0x030B);
 	ret_val = e1000_write_phy_reg_bcm_rdb(hw, 0x030A, 0x34C0);
@@ -3249,6 +3253,7 @@ s32 e1000_initialize_BCM89611_phy(struct e1000_hw *hw)
 	ret_val = e1000_write_phy_reg_bcm_rdb(hw, 0x012E, 0x404D);
 	ret_val = e1000_write_phy_reg_bcm_rdb(hw, 0x0123, 0x00C0);
 	ret_val = e1000_write_phy_reg_bcm_rdb(hw, 0x0154, 0x81C4);
+*/
 	
 	//IOUT = &H2&    ' 10=4.0mA
 	//SLEW = &H2&    ' 10=3xdefault_slew
@@ -3256,30 +3261,35 @@ s32 e1000_initialize_BCM89611_phy(struct e1000_hw *hw)
 	//v = &H0000& Or MII_PAD_SETTING * 2048
 	//App.WrMii PORT, &H001E&, &H0811&   '
 	//App.WrMii PORT, &H001F&, v   '
-	e1000_write_phy_reg_bcm_rdb(hw, 0x0811, (0x2+(0x2<<2))<<11);
+
+/*	e1000_write_phy_reg_bcm_rdb(hw, 0x0811, (0x2+(0x2<<2))<<11);*/
 	
 	//v = &H0064&
 	//App.WrMii PORT, &H001E&, &H01D3&   '
 	//App.WrMii PORT, &H001F&, v   '
-	e1000_write_phy_reg_bcm_rdb(hw, 0x01D3, 0x0064);
+
+/*	e1000_write_phy_reg_bcm_rdb(hw, 0x01D3, 0x0064);
 	e1000_write_phy_reg_bcm_rdb(hw, 0x01C1, 0xA5F7);
-	e1000_write_phy_reg_bcm_rdb(hw, 0x0028, 0x0400);
+	e1000_write_phy_reg_bcm_rdb(hw, 0x0028, 0x0400);*/
+
 /* End EMI optimization */
 
-/*
+
 	//begin LED setup portion
-	e1000_write_phy_reg_bcm_rdb(hw, 0x001D, 0x3411);
-	e1000_write_phy_reg_bcm_rdb(hw, 0x0820, 0x0401);
+/*	e1000_write_phy_reg_bcm_rdb(hw, 0x001D, 0x3411);
+	e1000_write_phy_reg_bcm_rdb(hw, 0x0820, 0x0401);*/
 	//end of LED setup
-*/
+
 
 	/* Set to RGMII mode */
+
 	ret_val = e1000_write_phy_reg_bcm_rdb(hw, 0x0045, 0x0000);
 	if (ret_val)
 		goto out;
 	ret_val = e1000_write_phy_reg_bcm_rdb(hw, 0x002F, 0xF1E7);
 	if (ret_val)
 		goto out;
+
 
 	/* Set phy to master mode */
 	printk(KERN_INFO "LGE_INFO: igb_avb Forcing BroadrReach PHY to master");
@@ -3288,6 +3298,8 @@ s32 e1000_initialize_BCM89611_phy(struct e1000_hw *hw)
 	if (ret_val)
 		goto out;
 
+	phy->addr=1;
+	
 out:
 	return ret_val;
 }

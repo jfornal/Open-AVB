@@ -42,7 +42,7 @@ endif
 CFLAGS_EXTRA += -DIGB_PTP
 
 #DDEBUG
-CFLAGS_EXTRA += -DDEBUG
+#CFLAGS_EXTRA += -DDEBUG
 
 # Add 32 bit ioctl support
 ifeq ($(32BIT_IOCTL_SUPPORT),y)

@@ -778,8 +778,8 @@ static void igb_ptp_overflow_check_82576(struct work_struct *work)
 
 	igb_ptp_gettime64_82576(&igb->ptp_caps, &ts64);
 
-	pr_debug("igb overflow check at %lld.%09lu\n",
-		 (long long)ts64.tv_sec, ts64.tv_nsec);
+	//pr_debug("igb overflow check at %lld.%09lu\n",
+	//	 (long long)ts64.tv_sec, ts64.tv_nsec);
 
 	schedule_delayed_work(&igb->ptp_overflow_work,
 			      IGB_SYSTIM_OVERFLOW_PERIOD);

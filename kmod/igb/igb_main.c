@@ -2887,7 +2887,7 @@ static int igb_probe(struct pci_dev *pdev,
 
 	/* Initialize link properties that are user-changeable */
 	adapter->fc_autoneg = true;
-	hw->mac.autoneg = true;
+	hw->mac.autoneg = false;
 	hw->phy.autoneg_advertised = 0x2f;
 
 	hw->fc.requested_mode = e1000_fc_default;

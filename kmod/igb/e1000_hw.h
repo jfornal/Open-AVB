@@ -134,7 +134,7 @@ enum e1000_phy_type {
 	e1000_phy_82580,
 	e1000_phy_vf,
 	e1000_phy_i210,
-	e1000_phy_bcm89611, /* Tag: LGE_V@_IPC+ */
+	e1000_phy_bcm89811, /* Tag: LGE_V@_IPC+ */
 };
 
 enum e1000_bus_type {

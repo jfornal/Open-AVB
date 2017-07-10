@@ -274,7 +274,7 @@ s32 e1000_read_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 *data)
 	struct e1000_phy_info *phy = &hw->phy;
 	u32 i, mdic = 0, mdicnfg = 0;
 
-	DEBUGFUNC("e1000_read_phy_reg_mdic");
+//	printk(KERN_INFO "e1000_read_phy_reg_mdic\n");
 	
 	if (offset > MAX_PHY_REG_ADDRESS) {
 		DEBUGOUT1("PHY Address %d is out of range\n", offset);
@@ -300,6 +300,7 @@ s32 e1000_read_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 *data)
 			mdicnfg = E1000_READ_REG(hw, E1000_MDICNFG);
 			mdicnfg &= ~E1000_MDICNFG_PHY_MASK;
 			mdicnfg |= (phy->addr << E1000_MDICNFG_PHY_SHIFT);
+//			printk(KERN_INFO "MDICNFG value: %x \n", mdicnfg);
 			E1000_WRITE_REG(hw, E1000_MDICNFG, mdicnfg);
 			break;
 		default:
@@ -335,8 +336,8 @@ s32 e1000_read_phy_reg_mdic(struct e1000_hw *hw, u32 offset, u16 *data)
 		return -E1000_ERR_PHY;
 	}
 	*data = (u16) mdic;
-	printk(KERN_INFO "igb_avb phy->addr: %d", phy->addr);
-	printk(KERN_INFO "igb_avb mdic %x",mdic);
+	//printk(KERN_INFO "igb_avb phy->addr: %d", phy->addr);
+	//printk(KERN_INFO "igb_avb mdic %x",mdic);
 	
 	return E1000_SUCCESS;
 }
@@ -1132,33 +1133,44 @@ s32 e1000_copper_link_setup_bcm89611(struct e1000_hw *hw)
 
 	/* Setup BCM89611 SGMII <-> RGMII bridge PHY */
 
-	printk(KERN_INFO "LGE_INFO: igb_avb reconfiguring BCM89611 PHY0 as 100Mb SGMII/RGMII Bridge");
+//	printk(KERN_INFO "LGE_INFO: igb_avb reconfiguring BCM89611 PHY0 as 100Mb SGMII/RGMII Bridge");
 
-	phy->addr = 0;
+	phy->addr = 1;
 
 	/* setup SGMII/RGMII mode for PHY0 bridge (from BCM89611 Data Sheet, Section 1, Serial GMII Interface) */
-	e1000_write_phy_reg_bcm_top(hw, 0x34, 0x0000); /* Top-Level Expansion: Spare Register 0 */
+//	e1000_write_phy_reg_bcm_top(hw, 0x34, 0x0000); /* Top-Level Expansion: Spare Register 0 */
 
 	/* Enable Fiber Registers 00h-0Fh */
-	e1000_write_phy_reg_bcm_s1c(hw, 0x1F, 0x004B); /* Mode Control Shadow Register */
-	e1000_write_phy_reg_bcm_s1c(hw, 0x16, 0x002C);
+//	e1000_write_phy_reg_bcm_s1c(hw, 0x1F, 0x004B); /* Mode Control Shadow Register */
+//	e1000_write_phy_reg_bcm_s1c(hw, 0x16, 0x002C);
 
 	/* Enable SGMII Slave */
-	e1000_write_phy_reg_bcm_s1c(hw, 0x15, 0x0182); /* SGMII Slave Shadow Register */
-	phy->ops.read_reg(hw, 0x1C, &reg);
+//	e1000_write_phy_reg_bcm_s1c(hw, 0x15, 0x0182); /* SGMII Slave Shadow Register */
+//	phy->ops.read_reg(hw, 0x1C, &reg);
 	
 	/*Intel debug purposes - enabling SGMII loopback mode
  	* hw - pointer to hardware structure
 	* 0x44 - offset to expansio register
 	* 0x34 - value to be written to expansion reg via 0x15h reg - bits 2,3 and 5 set to 1
  	*/
-	e1000_write_phy_reg_bcm_exp(hw, 0x44, 0x34);
+	//e1000_write_phy_reg_bcm_exp(hw, 0x44, 0x34);
 
 	/* deisolate PHY bridge and set to 100Mb/Full forced */
+		
+	phy->ops.write_reg(hw, 0x00, 0x800);
+	msec_delay(1000);
+	phy->ops.write_reg(hw, 0x00, 0x8000);
+	phy->ops.write_reg(hw, 0x1c, 0xfc4b);
+	phy->ops.write_reg(hw, 0x1c, 0xd82c);
+	phy->ops.write_reg(hw, 0x1c, 0xd5a2);
+	phy->ops.write_reg(hw, 0x1c, 0x5400);
+
+	e1000_write_phy_reg_bcm_exp(hw, 0x44, 0x34);
+
 	phy->ops.write_reg(hw, 0x00, 0x2100);
 
-	phy->addr = 1;
-	phy->ops.read_reg(hw, 0x00, &reg); /* make sure mdicnfg gets reset with phy->addr */
+//	phy->addr = 0;
+//	phy->ops.read_reg(hw, 0x00, &reg); /* make sure mdicnfg gets reset with phy->addr */
 
 	return E1000_SUCCESS;
 }
@@ -1700,6 +1712,7 @@ s32 e1000_setup_copper_link_generic(struct e1000_hw *hw)
 		/* Setup autoneg and flow control advertisement and perform
 		 * autonegotiation.
 		 */
+		printk(KERN_INFO "autoneg enabled, copper_link \n");
 		ret_val = e1000_copper_link_autoneg(hw);
 		if (ret_val)
 			return ret_val;
@@ -1708,6 +1721,7 @@ s32 e1000_setup_copper_link_generic(struct e1000_hw *hw)
 		 * depending on user settings.
 		 */
 		DEBUGOUT("Forcing Speed and Duplex\n");
+		printk(KERN_INFO "forcing speed and duplex\n");
 		ret_val = hw->phy.ops.force_speed_duplex(hw);
 		if (ret_val) {
 			DEBUGOUT("Error Forcing Speed and Duplex\n");
@@ -1724,11 +1738,11 @@ s32 e1000_setup_copper_link_generic(struct e1000_hw *hw)
 		return ret_val;
 
 	if (link) {
-		DEBUGOUT("Valid link established!!!\n");
+		printk(KERN_INFO "Valid link established!!!\n");
 		hw->mac.ops.config_collision_dist(hw);
 		ret_val = e1000_config_fc_after_link_up_generic(hw);
 	} else {
-		DEBUGOUT("Unable to establish link!!!\n");
+		printk(KERN_INFO "Unable to establish link!!!\n");
 	}
 
 	return ret_val;
@@ -2363,7 +2377,11 @@ s32 e1000_phy_has_link_generic(struct e1000_hw *hw, u32 iterations,
 		 * twice due to the link bit being sticky.  No harm doing
 		 * it across the board.
 		 */
+		u16 reg_zero;
+		ret_val = hw->phy.ops.read_reg(hw, 0x0, &reg_zero);
+		printk(KERN_INFO "phy_has_link_generic reg 0x0 %x", reg_zero);
 		ret_val = hw->phy.ops.read_reg(hw, PHY_STATUS, &phy_status);
+		printk(KERN_INFO "phy_has_link_generic phy_status_1 %x", phy_status);
 		if (ret_val) {
 			/* If the first read fails, another entity may have
 			 * ownership of the resources, wait and try again to
@@ -2375,6 +2393,7 @@ s32 e1000_phy_has_link_generic(struct e1000_hw *hw, u32 iterations,
 				usec_delay(usec_interval);
 		}
 		ret_val = hw->phy.ops.read_reg(hw, PHY_STATUS, &phy_status);
+		printk(KERN_INFO "phy_has_link_generic phy_status_2 %x", phy_status);
 		if (ret_val)
 			break;
 		if (phy_status & MII_SR_LINK_STATUS)
